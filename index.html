@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Front-end Academy – Học HTML, CSS, JavaScript từ A–Z</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand" data-nav="home">
+      <span class="brand-logo">🎓</span>
+      <div>
+        <div class="brand-name">Front-end Academy</div>
+        <div class="brand-sub">Từ con số 0 đến Developer</div>
+      </div>
+    </div>
+
+    <div class="progress-card">
+      <div class="progress-top">
+        <span>Tiến độ</span>
+        <b id="progressText">0%</b>
+      </div>
+      <div class="bar"><div class="bar-fill" id="progressBar"></div></div>
+      <div class="xp"><span>⭐ <b id="xpText">0</b> XP</span><span>🔥 <b id="streakText">0</b> ngày</span></div>
+    </div>
+
+    <nav class="nav-links">
+      <button class="nav-btn" data-nav="home"><span>🏠</span> Trang chủ</button>
+      <button class="nav-btn" data-nav="playground"><span>🧪</span> Sân chơi code</button>
+    </nav>
+
+    <div class="sidebar-search">
+      <input id="searchInput" type="search" placeholder="🔍 Tìm bài học...">
+    </div>
+    <div class="level-list" id="levelList"></div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+    <header class="topbar">
+      <button class="icon-btn mobile-only" id="menuBtn" title="Menu">☰</button>
+      <div class="crumbs" id="crumbs">Trang chủ</div>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="themeBtn" title="Đổi giao diện sáng/tối">🌙</button>
+        <button class="icon-btn" id="resetBtn" title="Xoá tiến độ">♻️</button>
+      </div>
+    </header>
+
+    <div id="view"></div>
+  </main>
+
+  <!-- ============ CHATBOT ============ -->
+  <button class="chat-fab" id="chatFab" title="Trợ lý học tập">
+    <span class="fab-icon">🤖</span>
+    <span class="fab-ping"></span>
+  </button>
+
+  <section class="chat" id="chat" aria-hidden="true">
+    <header class="chat-head">
+      <div class="chat-avatar">🤖</div>
+      <div class="chat-title">
+        <b>Trợ lý Bit</b>
+        <small id="chatMode">Chế độ offline · luôn sẵn sàng</small>
+      </div>
+      <button class="icon-btn small" id="chatSettingsBtn" title="Cài đặt AI">⚙️</button>
+      <button class="icon-btn small" id="chatClose" title="Đóng">✕</button>
+    </header>
+
+    <div class="chat-settings" id="chatSettings" hidden>
+      <p class="muted">Kết nối AI thật (tuỳ chọn). Key chỉ lưu trên trình duyệt của bạn – <b>không dùng trên máy tính công cộng</b>.</p>
+      <label>Nhà cung cấp
+        <select id="aiProvider">
+          <option value="offline">Offline (không cần key)</option>
+          <option value="gemini">Google Gemini</option>
+          <option value="openai">OpenAI / API tương thích</option>
+        </select>
+      </label>
+      <label>API key <input id="aiKey" type="password" placeholder="Dán API key..."></label>
+      <label>Model <input id="aiModel" placeholder="gemini-2.5-flash / gpt-4o-mini"></label>
+      <label class="openai-only">Base URL <input id="aiBase" placeholder="https://api.openai.com/v1"></label>
+      <button class="btn primary sm" id="aiSave">Lưu cài đặt</button>
+    </div>
+
+    <div class="chat-body" id="chatBody"></div>
+
+    <div class="chat-chips" id="chatChips"></div>
+
+    <form class="chat-input" id="chatForm">
+      <textarea id="chatText" rows="1" placeholder="Hỏi mình bất cứ điều gì về Front-end..."></textarea>
+      <button class="send-btn" type="submit" title="Gửi">➤</button>
+    </form>
+  </section>
+
+  <div class="toast" id="toast"></div>
+  <div class="confetti" id="confetti"></div>
+
+  <script src="js/lessons.js"></script>
+  <script src="js/playground.js"></script>
+  <script src="js/chatbot.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
