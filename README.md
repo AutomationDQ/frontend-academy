@@ -51,3 +51,6 @@ frontend-academy/
 - Thêm quiz trắc nghiệm cuối mỗi cấp, chứng chỉ khi hoàn thành.
 - Đăng nhập + lưu tiến độ lên cloud (Supabase/Firebase).
 - Deploy miễn phí bằng **GitHub Pages**.
+
+## Tác giả
+**Doãn Quảng** – thực hiện & phát triển Front-end Academy.

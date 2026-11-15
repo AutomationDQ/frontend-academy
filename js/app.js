@@ -229,7 +229,8 @@
       <div class="next-grid">
         ${ROADMAP_NEXT.map(n => `<div class="next-card"><span>${n.icon}</span><b>${n.name}</b><p>${n.desc}</p></div>`).join("")}
       </div>
-      <p class="muted" style="margin:28px 0 60px;font-size:13px">💡 Mẹo: bấm <b>Ctrl + Enter</b> trong ô code để chạy, hỏi Bit 🤖 "kiểm tra code" khi gặp lỗi.</p>`;
+      <p class="muted" style="margin:28px 0 0;font-size:13px">💡 Mẹo: bấm <b>Ctrl + Enter</b> trong ô code để chạy, hỏi Bit 🤖 "kiểm tra code" khi gặp lỗi.</p>
+      <footer class="site-footer">© ${new Date().getFullYear()} <b>Front-end Academy</b> · Thực hiện bởi <b>Doãn Quảng</b></footer>`;
 
     $("#startBtn").addEventListener("click", () => go("#/lesson/" + (nx || LESSONS[0].id)));
     $("#view").querySelectorAll("[data-go]").forEach(el => el.addEventListener("click", () => go(el.dataset.go)));
