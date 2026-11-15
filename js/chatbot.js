@@ -206,7 +206,7 @@
     const recent = history.slice(-10);
 
     if (cfg.provider === "gemini") {
-      const model = cfg.model || "gemini-2.5-flash";
+      const model = cfg.model || "gemini-3.8-flash";
       const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": cfg.key },
