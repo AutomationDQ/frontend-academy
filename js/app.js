@@ -270,6 +270,12 @@
             </div>
             <div class="hint-box" id="hintBox" hidden></div>
             <div class="result" id="result"></div>
+            <div class="ex-next" id="exNext" hidden>
+              <span>${next ? "Hoàn thành rồi! Sẵn sàng cho bài tiếp theo chưa?" : "🏆 Bạn đã học xong bài cuối cùng của khoá!"}</span>
+              ${next
+                ? `<button class="btn primary" id="nextBtn" data-go="#/lesson/${next.id}">Bài tiếp: ${next.icon} ${esc(next.title)} →</button>`
+                : `<button class="btn primary" id="nextBtn" data-go="#/">🏠 Về trang chủ</button>`}
+            </div>
           </div>
 
           <div class="lesson-nav">
@@ -320,6 +326,12 @@
     });
 
     const result = $("#result");
+    const exNext = $("#exNext");
+    const showNext = (scroll) => {
+      exNext.hidden = false;
+      if (scroll) exNext.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+    if (state.done[id]) showNext(false); // bài đã xong trước đó: hiện nút ngay
     const show = (ok, msg) => { result.className = "result " + (ok ? "ok" : "fail"); result.textContent = (ok ? "🎉 " : "❌ ") + msg; };
 
     $("#checkBtn").addEventListener("click", async () => {
@@ -336,6 +348,7 @@
           renderSidebar($("#searchInput").value);
         }
         confetti();
+        showNext(true);
       } else {
         fails++;
         if (fails === 2 && window.Chatbot) {

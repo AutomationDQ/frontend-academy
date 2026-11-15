@@ -239,6 +239,10 @@ body.light .lesson-content code { color: #a21caf; }
 .result.ok { display: block; background: rgba(34, 197, 94, .15); border: 1px solid var(--success); color: var(--success); }
 .result.fail { display: block; background: rgba(239, 68, 68, .12); border: 1px solid var(--danger); color: #fca5a5; }
 body.light .result.fail { color: var(--danger); }
+.ex-next { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 12px; padding: 12px 14px; border-radius: 12px; border: 1px dashed var(--success); background: rgba(34, 197, 94, .08); animation: fadeUp .3s; }
+.ex-next[hidden] { display: none; }
+.ex-next span { font-weight: 600; }
+@media (max-width: 600px) { .ex-next .btn { width: 100%; justify-content: center; } }
 .done-badge { display: inline-flex; gap: 6px; align-items: center; color: var(--success); font-weight: 700; font-size: 13px; }
 
 /* ---------------- Playground / Editor ---------------- */
