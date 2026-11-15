@@ -249,7 +249,11 @@
       $("aiProvider").value = this.cfg.provider; $("aiKey").value = this.cfg.key; $("aiModel").value = this.cfg.model; $("aiBase").value = this.cfg.base;
       this.updateMode();
 
-      this.el.fab.addEventListener("click", () => this.toggle());
+      this.el.fab.addEventListener("click", () => {
+        if (this._dragged) { this._dragged = false; return; } // vừa kéo xong → không mở chat
+        this.toggle();
+      });
+      this.initDrag();
       $("chatClose").addEventListener("click", () => this.toggle(false));
       $("chatSettingsBtn").addEventListener("click", () => { this.el.settings.hidden = !this.el.settings.hidden; });
       $("aiSave").addEventListener("click", () => {
@@ -284,7 +288,86 @@
       this.el.box.classList.toggle("open", open);
       this.el.box.setAttribute("aria-hidden", !open);
       this.el.fab.classList.add("seen");
-      if (open) { this.renderChips(); setTimeout(() => this.el.text.focus(), 200); }
+      if (open) { this.positionPanel(); this.renderChips(); setTimeout(() => this.el.text.focus(), 200); }
+    },
+
+    /* ---------- Kéo thả logo chatbot ----------
+       Kéo > 6px mới tính là "kéo" (dưới ngưỡng vẫn là click mở chat).
+       Thả ra: hít vào mép trái/phải gần nhất, lưu { side, ry } vào localStorage
+       (ry = tỉ lệ theo chiều cao → giữ đúng chỗ khi đổi kích thước cửa sổ). */
+    initDrag() {
+      const fab = this.el.fab, KEY = "fe-fab-pos", MARGIN = 20, THRESHOLD = 6;
+      const size = () => [fab.offsetWidth, fab.offsetHeight];
+      const clamp = (x, y) => {
+        const [w, h] = size();
+        return [Math.min(Math.max(MARGIN, x), innerWidth - w - MARGIN), Math.min(Math.max(MARGIN, y), innerHeight - h - MARGIN)];
+      };
+      const place = (x, y) => {
+        [x, y] = clamp(x, y);
+        Object.assign(fab.style, { left: x + "px", top: y + "px", right: "auto", bottom: "auto" });
+      };
+      const applySaved = () => {
+        if (!this.fabPos) return;
+        const [w, h] = size();
+        place(this.fabPos.side === "left" ? MARGIN : innerWidth - w - MARGIN, this.fabPos.ry * (innerHeight - h));
+        if (this.el.box.classList.contains("open")) this.positionPanel();
+      };
+      try { this.fabPos = JSON.parse(localStorage.getItem(KEY)); } catch (e) { this.fabPos = null; }
+      applySaved();
+      addEventListener("resize", applySaved);
+
+      let start = null;
+      fab.addEventListener("pointerdown", e => {
+        if (e.button !== 0) return;
+        const r = fab.getBoundingClientRect();
+        start = { px: e.clientX, py: e.clientY, x: r.left, y: r.top, moved: false };
+        fab.setPointerCapture(e.pointerId);
+      });
+      fab.addEventListener("pointermove", e => {
+        if (!start) return;
+        const dx = e.clientX - start.px, dy = e.clientY - start.py;
+        if (!start.moved && Math.hypot(dx, dy) < THRESHOLD) return;
+        if (!start.moved) { start.moved = true; fab.classList.add("dragging"); }
+        place(start.x + dx, start.y + dy);
+        if (this.el.box.classList.contains("open")) this.positionPanel();
+      });
+      const end = () => {
+        if (!start) return;
+        const moved = start.moved; start = null;
+        fab.classList.remove("dragging");
+        if (!moved) return;
+        this._dragged = true; setTimeout(() => { this._dragged = false; }, 0); // chặn click ngay sau khi thả
+        const r = fab.getBoundingClientRect();
+        const side = r.left + r.width / 2 < innerWidth / 2 ? "left" : "right";
+        this.fabPos = { side, ry: r.top / Math.max(1, innerHeight - r.height) };
+        try { localStorage.setItem(KEY, JSON.stringify(this.fabPos)); } catch (e) {}
+        fab.classList.add("snapping");
+        applySaved();
+        setTimeout(() => fab.classList.remove("snapping"), 300);
+      };
+      fab.addEventListener("pointerup", end);
+      fab.addEventListener("pointercancel", end);
+      // Nhấp đúp: đưa logo về góc phải dưới mặc định
+      fab.addEventListener("dblclick", () => {
+        this.fabPos = null;
+        try { localStorage.removeItem(KEY); } catch (e) {}
+        fab.removeAttribute("style");
+        this.positionPanel();
+      });
+    },
+
+    /* Đặt khung chat cạnh logo: logo bên trái → khung mở sang phải; logo nửa trên → khung mở xuống dưới */
+    positionPanel() {
+      const box = this.el.box;
+      if (!this.fabPos) { box.removeAttribute("style"); return; } // vị trí mặc định theo CSS
+      const r = this.el.fab.getBoundingClientRect(), GAP = 12, M = 16;
+      const left = this.fabPos.side === "left", below = r.top + r.height / 2 < innerHeight / 2;
+      const s = { left: "auto", right: "auto", top: "auto", bottom: "auto" };
+      if (left) s.left = Math.max(M, r.left) + "px"; else s.right = Math.max(M, innerWidth - r.right) + "px";
+      if (below) { s.top = r.bottom + GAP + "px"; s.maxHeight = innerHeight - r.bottom - GAP - M + "px"; }
+      else { s.bottom = innerHeight - r.top + GAP + "px"; s.maxHeight = r.top - GAP - M + "px"; }
+      s.transformOrigin = (below ? "top " : "bottom ") + (left ? "left" : "right");
+      Object.assign(box.style, s);
     },
 
     renderChips() {
