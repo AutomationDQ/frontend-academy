@@ -3,36 +3,47 @@
    Dùng CSS variables để đổi theme sáng/tối
    ========================================================= */
 :root {
-  --bg: #0b1020;
-  --bg-2: #11172b;
-  --panel: #151c33;
-  --panel-2: #1b2340;
-  --border: #263056;
-  --text: #e7ebf7;
-  --muted: #8f9bbf;
-  --primary: #7c5cff;
-  --primary-2: #22d3ee;
-  --accent: #ff5ca8;
+  /* Theme TỐI – xanh lá đậm */
+  --bg: #0b1a12;
+  --bg-2: #0f2218;
+  --panel: #13291d;
+  --panel-2: #183323;
+  --border: #25472f;
+  --text: #ecf7ef;
+  --muted: #94b8a0;
+  /* 3 màu chủ đạo */
+  --primary: #16a34a;      /* xanh lá */
+  --primary-2: #22c55e;    /* xanh lá sáng */
+  --accent: #facc15;       /* vàng */
+  --accent-ink: #713f12;   /* chữ đặt trên nền vàng */
+  --link: #facc15;
+  --code-inline: #fde047;
   --success: #22c55e;
   --danger: #ef4444;
   --warn: #f59e0b;
   --radius: 16px;
   --shadow: 0 10px 30px rgba(0, 0, 0, .35);
-  --grad: linear-gradient(135deg, var(--primary), var(--primary-2));
+  --glow: rgba(22, 163, 74, .35);
+  --grad: linear-gradient(135deg, #15803d, #22c55e);         /* nút, chat – chữ trắng */
+  --grad-gy: linear-gradient(90deg, #16a34a, #84cc16, #facc15); /* thanh tiến độ, trang trí */
   --font: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mono: 'JetBrains Mono', Consolas, monospace;
   --sidebar-w: 300px;
 }
 
+/* Theme SÁNG (mặc định) – nền trắng, xanh lá, vàng */
 body.light {
-  --bg: #f4f6fc;
+  --bg: #f6fbf4;
   --bg-2: #ffffff;
   --panel: #ffffff;
-  --panel-2: #eef1fa;
-  --border: #dde3f3;
-  --text: #1a2140;
-  --muted: #66708f;
-  --shadow: 0 10px 30px rgba(30, 41, 90, .08);
+  --panel-2: #eef8ea;
+  --border: #d5ead0;
+  --text: #14301f;
+  --muted: #5a7464;
+  --link: #15803d;
+  --code-inline: #15803d;
+  --shadow: 0 10px 30px rgba(22, 101, 52, .08);
+  --glow: rgba(22, 163, 74, .25);
 }
 
 * { box-sizing: border-box; }
@@ -45,11 +56,11 @@ body {
   display: flex;
   overflow: hidden;
   background-image:
-    radial-gradient(circle at 15% 0%, rgba(124, 92, 255, .14), transparent 40%),
-    radial-gradient(circle at 100% 100%, rgba(34, 211, 238, .10), transparent 40%);
+    radial-gradient(circle at 15% 0%, rgba(34, 197, 94, .12), transparent 40%),
+    radial-gradient(circle at 100% 100%, rgba(250, 204, 21, .12), transparent 40%);
 }
 button { font-family: inherit; }
-a { color: var(--primary-2); }
+a { color: var(--link); }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
 
@@ -71,7 +82,7 @@ a { color: var(--primary-2); }
 .brand { display: flex; gap: 12px; align-items: center; cursor: pointer; padding: 4px 6px; }
 .brand-logo {
   font-size: 26px; width: 46px; height: 46px; display: grid; place-items: center;
-  background: var(--grad); border-radius: 14px; box-shadow: 0 6px 20px rgba(124, 92, 255, .45);
+  background: var(--grad); border-radius: 14px; box-shadow: 0 6px 20px var(--glow);
 }
 .brand-name { font-weight: 800; font-size: 17px; }
 .brand-sub { font-size: 12px; color: var(--muted); }
@@ -80,7 +91,7 @@ a { color: var(--primary-2); }
 .progress-top { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
 .progress-top b { color: var(--text); }
 .bar { height: 8px; background: var(--panel-2); border-radius: 99px; margin: 10px 0; overflow: hidden; }
-.bar-fill { height: 100%; width: 0; background: var(--grad); border-radius: 99px; transition: width .6s cubic-bezier(.2, .8, .2, 1); }
+.bar-fill { height: 100%; width: 0; background: var(--grad-gy); border-radius: 99px; transition: width .6s cubic-bezier(.2, .8, .2, 1); }
 .xp { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
 .xp b { color: var(--text); }
 
@@ -92,8 +103,8 @@ a { color: var(--primary-2); }
   transition: background .2s, transform .2s;
 }
 .nav-btn:hover, .lesson-link:hover { background: var(--panel-2); }
-.nav-btn.active, .lesson-link.active { background: rgba(124, 92, 255, .18); color: #fff; }
-body.light .nav-btn.active, body.light .lesson-link.active { color: var(--primary); }
+.nav-btn.active, .lesson-link.active { background: rgba(34, 197, 94, .18); color: #fff; box-shadow: inset 3px 0 0 var(--accent); }
+body.light .nav-btn.active, body.light .lesson-link.active { color: #15803d; background: #dcfce7; }
 
 .sidebar-search input {
   width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border);
@@ -142,7 +153,8 @@ body.light .nav-btn.active, body.light .lesson-link.active { color: var(--primar
   font-weight: 600; cursor: pointer; font-size: 14px; transition: transform .2s, box-shadow .2s, background .2s;
 }
 .btn:hover { transform: translateY(-2px); }
-.btn.primary { background: var(--grad); border: 0; color: #fff; box-shadow: 0 8px 22px rgba(124, 92, 255, .35); }
+.btn.primary { background: var(--grad); border: 0; color: #fff; box-shadow: 0 8px 22px var(--glow); }
+.btn.accent { background: var(--accent); border: 0; color: var(--accent-ink); }
 .btn.success { background: var(--success); border: 0; color: #fff; }
 .btn.ghost { background: transparent; }
 .btn.sm { padding: 8px 14px; font-size: 13px; }
@@ -150,13 +162,14 @@ body.light .nav-btn.active, body.light .lesson-link.active { color: var(--primar
 /* ---------------- Home ---------------- */
 .hero {
   position: relative; overflow: hidden; border-radius: 24px; padding: 44px;
-  background: linear-gradient(135deg, #2b1b6b, #0e3a5a); color: #fff;
+  background: linear-gradient(135deg, #14532d, #15803d 55%, #4d7c0f); color: #fff;
   border: 1px solid rgba(255, 255, 255, .08); box-shadow: var(--shadow);
 }
 .hero h1 { font-size: clamp(28px, 4vw, 44px); margin: 0 0 12px; line-height: 1.15; }
-.hero h1 span { background: linear-gradient(90deg, #a78bfa, #22d3ee, #f472b6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero h1 span { background: linear-gradient(90deg, #fde047, #facc15, #fef9c3); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .hero p { max-width: 620px; opacity: .85; font-size: 16px; line-height: 1.7; }
 .hero-actions { display: flex; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
+.hero .btn.primary { background: var(--accent); color: var(--accent-ink); box-shadow: 0 8px 22px rgba(250, 204, 21, .35); }
 .hero .btn:not(.primary) { background: rgba(255, 255, 255, .1); color: #fff; border-color: rgba(255, 255, 255, .2); }
 .hero-float { position: absolute; font-size: 42px; animation: float 6s ease-in-out infinite; opacity: .9; }
 @keyframes float { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-16px) rotate(8deg); } }
@@ -205,17 +218,16 @@ body.light .nav-btn.active, body.light .lesson-link.active { color: var(--primar
 .lesson-title h1 { margin: 0; font-size: 26px; line-height: 1.3; }
 .lesson-meta { color: var(--muted); font-size: 13px; display: flex; gap: 16px; margin-bottom: 10px; }
 .lesson-content h2 { font-size: 19px; margin: 26px 0 8px; display: flex; gap: 8px; align-items: center; }
-.lesson-content h2::before { content: ""; width: 6px; height: 20px; border-radius: 4px; background: var(--grad); }
-.lesson-content code { font-family: var(--mono); font-size: 13px; background: var(--panel-2); padding: 2px 7px; border-radius: 6px; color: #f0abfc; }
-body.light .lesson-content code { color: #a21caf; }
+.lesson-content h2::before { content: ""; width: 6px; height: 20px; border-radius: 4px; background: linear-gradient(180deg, #16a34a, #facc15); }
+.lesson-content code { font-family: var(--mono); font-size: 13px; background: var(--panel-2); padding: 2px 7px; border-radius: 6px; color: var(--code-inline); }
 .lesson-content ul { padding-left: 20px; }
 .lesson-content li { margin: 6px 0; }
 .code-block { position: relative; margin: 12px 0; }
 .code-block pre {
-  margin: 0; padding: 16px; border-radius: 14px; background: #0a0e1c; color: #e2e8f0; overflow-x: auto;
-  font-family: var(--mono); font-size: 13px; line-height: 1.6; border: 1px solid #1e2747;
+  margin: 0; padding: 16px; border-radius: 14px; background: #0d1b14; color: #e2e8f0; overflow-x: auto;
+  font-family: var(--mono); font-size: 13px; line-height: 1.6; border: 1px solid #1d3a2a;
 }
-.code-block .copy { position: absolute; top: 8px; right: 8px; font-size: 12px; padding: 4px 10px; border-radius: 8px; border: 1px solid #334; background: #1b2340; color: #cbd5e1; cursor: pointer; opacity: 0; transition: .2s; }
+.code-block .copy { position: absolute; top: 8px; right: 8px; font-size: 12px; padding: 4px 10px; border-radius: 8px; border: 1px solid #334; background: #183323; color: #cbd5e1; cursor: pointer; opacity: 0; transition: .2s; }
 .code-block:hover .copy { opacity: 1; }
 .tk-tag { color: #f472b6; } .tk-attr { color: #fbbf24; } .tk-str { color: #86efac; } .tk-com { color: #64748b; font-style: italic; }
 .tk-kw { color: #c084fc; } .tk-num { color: #fb923c; } .tk-prop { color: #67e8f9; }
@@ -228,8 +240,8 @@ body.light .lesson-content code { color: #a21caf; }
 
 .exercise-card {
   margin-top: 24px; padding: 18px; border-radius: 16px;
-  background: linear-gradient(135deg, rgba(124, 92, 255, .14), rgba(34, 211, 238, .08));
-  border: 1px solid rgba(124, 92, 255, .35);
+  background: linear-gradient(135deg, rgba(34, 197, 94, .12), rgba(250, 204, 21, .12));
+  border: 1px solid rgba(34, 197, 94, .4);
 }
 .exercise-card h3 { margin: 0 0 8px; display: flex; gap: 8px; align-items: center; }
 .exercise-card p { margin: 0 0 12px; }
@@ -255,28 +267,28 @@ body.light .result.fail { color: var(--danger); }
 .pg-spacer { flex: 1; }
 .pg-toggle { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
 .pg-split { flex: 1; display: grid; grid-template-rows: 1fr 1fr; min-height: 0; }
-.editor-wrap { position: relative; display: flex; min-height: 0; background: #0a0e1c; }
-.line-nums { padding: 14px 8px 14px 12px; color: #3b4672; font-family: var(--mono); font-size: 13px; line-height: 1.6; text-align: right; user-select: none; overflow: hidden; white-space: pre; min-width: 42px; }
+.editor-wrap { position: relative; display: flex; min-height: 0; background: #0d1b14; }
+.line-nums { padding: 14px 8px 14px 12px; color: #3f6b52; font-family: var(--mono); font-size: 13px; line-height: 1.6; text-align: right; user-select: none; overflow: hidden; white-space: pre; min-width: 42px; }
 .editor {
   flex: 1; resize: none; border: 0; outline: none; padding: 14px; background: transparent; color: #e2e8f0;
   font-family: var(--mono); font-size: 13.5px; line-height: 1.6; tab-size: 2; white-space: pre; overflow: auto;
 }
-.editor::selection { background: rgba(124, 92, 255, .4); }
+.editor::selection { background: rgba(250, 204, 21, .35); }
 .output { display: grid; grid-template-rows: 1fr auto; min-height: 0; border-top: 1px solid var(--border); }
 .preview-head { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--panel-2); font-size: 12px; color: var(--muted); }
 .preview-head .dots span { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
 .preview-box { display: grid; grid-template-rows: auto 1fr; min-height: 0; }
 .preview { width: 100%; height: 100%; border: 0; background: #fff; }
-.console { max-height: 140px; min-height: 70px; overflow-y: auto; background: #070a14; font-family: var(--mono); font-size: 12.5px; padding: 8px 12px; border-top: 1px solid var(--border); }
+.console { max-height: 140px; min-height: 70px; overflow-y: auto; background: #091510; font-family: var(--mono); font-size: 12.5px; padding: 8px 12px; border-top: 1px solid var(--border); }
 .console-head { display: flex; justify-content: space-between; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px; }
 .console-head button { background: none; border: 0; color: #64748b; cursor: pointer; font-size: 11px; }
-.log { padding: 3px 0; border-bottom: 1px solid #111831; color: #cbd5e1; white-space: pre-wrap; word-break: break-word; }
+.log { padding: 3px 0; border-bottom: 1px solid #14281d; color: #cbd5e1; white-space: pre-wrap; word-break: break-word; }
 .log.error { color: #f87171; } .log.warn { color: #fbbf24; } .log.info { color: #67e8f9; }
 
 /* ---------------- Chatbot ---------------- */
 .chat-fab {
   position: fixed; right: 24px; bottom: 24px; z-index: 60; width: 64px; height: 64px; border-radius: 50%; border: 0;
-  background: var(--grad); cursor: pointer; box-shadow: 0 12px 30px rgba(124, 92, 255, .5); transition: transform .25s;
+  background: var(--grad); cursor: pointer; box-shadow: 0 12px 30px var(--glow); transition: transform .25s;
 }
 .chat-fab:hover { transform: scale(1.08) rotate(-6deg); }
 .fab-icon { font-size: 30px; display: inline-block; animation: wave 3s ease-in-out infinite; }
@@ -306,9 +318,9 @@ body.light .result.fail { color: var(--danger); }
 .msg { max-width: 88%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.6; animation: fadeUp .25s; word-wrap: break-word; }
 .msg.bot { background: var(--panel-2); border-bottom-left-radius: 4px; align-self: flex-start; }
 .msg.user { background: var(--grad); color: #fff; border-bottom-right-radius: 4px; align-self: flex-end; }
-.msg pre { background: #0a0e1c; color: #e2e8f0; padding: 10px; border-radius: 10px; overflow-x: auto; font-size: 12px; font-family: var(--mono); }
+.msg pre { background: #0d1b14; color: #e2e8f0; padding: 10px; border-radius: 10px; overflow-x: auto; font-size: 12px; font-family: var(--mono); }
 .msg code { font-family: var(--mono); font-size: 12.5px; background: rgba(0, 0, 0, .25); padding: 1px 5px; border-radius: 5px; }
-.msg a.lesson-jump { display: inline-block; margin: 3px 4px 0 0; padding: 4px 10px; border-radius: 99px; background: rgba(124, 92, 255, .2); color: var(--text); text-decoration: none; font-size: 13px; cursor: pointer; }
+.msg a.lesson-jump { display: inline-block; margin: 3px 4px 0 0; padding: 4px 10px; border-radius: 99px; background: rgba(250, 204, 21, .3); color: var(--text); text-decoration: none; font-size: 13px; cursor: pointer; }
 .typing { display: flex; gap: 4px; padding: 14px; }
 .typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: blink 1.2s infinite; }
 .typing span:nth-child(2) { animation-delay: .2s; } .typing span:nth-child(3) { animation-delay: .4s; }
@@ -348,7 +360,7 @@ body.light .result.fail { color: var(--danger); }
 /* ---------------- Mode switch (Ví dụ / Bài tập) ---------------- */
 .mode-switch { display: flex; gap: 4px; padding: 4px; margin-bottom: 10px; background: var(--panel); border: 1px solid var(--border); border-radius: 14px; }
 .mode-switch button { flex: 1; padding: 9px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; transition: .2s; }
-.mode-switch button.active { background: var(--grad); color: #fff; box-shadow: 0 4px 14px rgba(124, 92, 255, .35); }
+.mode-switch button.active { background: var(--grad); color: #fff; box-shadow: 0 4px 14px var(--glow); }
 .lesson-wrap > div:last-child { position: sticky; top: 84px; }
 .lesson-wrap .pg { position: static; height: calc(100vh - 170px); }
 @media (max-width: 1100px) { .lesson-wrap > div:last-child { position: static; } .lesson-wrap .pg { height: 720px; } }

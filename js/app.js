@@ -14,11 +14,15 @@
     xp: 0,
     streak: 0,
     lastDay: null,
-    theme: "dark",
+    theme: "light",
+    themeV: 2,       // v2: bảng màu xanh lá – trắng – vàng
     playground: null
   };
   function load() {
-    try { Object.assign(state, JSON.parse(localStorage.getItem(STORE_KEY) || "{}")); } catch (e) {}
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(STORE_KEY) || "{}"); } catch (e) {}
+    Object.assign(state, saved);
+    if (saved.themeV !== 2) { state.theme = "light"; state.themeV = 2; } // chuyển sang theme mới 1 lần
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
@@ -96,7 +100,7 @@
   }
   function confetti() {
     const box = $("#confetti");
-    const colors = ["#7c5cff", "#22d3ee", "#ff5ca8", "#facc15", "#22c55e", "#f97316"];
+    const colors = ["#16a34a", "#22c55e", "#84cc16", "#facc15", "#fde047", "#ffffff"];
     for (let i = 0; i < 90; i++) {
       const c = document.createElement("i");
       c.style.left = Math.random() * 100 + "vw";
