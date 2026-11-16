@@ -195,6 +195,8 @@
   }
 
   /* ---------------- Gọi AI thật ---------------- */
+  const GEMINI_FALLBACKS = ["gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.8-flash"];
+  const GEMINI_TIMEOUT_MS = 20000;
   async function aiReply(history, ctx, cfg) {
     const sys = [
       "Bạn là Bit – trợ lý dạy lập trình Front-end (HTML, CSS, JavaScript) cho người mới bắt đầu.",
@@ -206,18 +208,37 @@
     const recent = history.slice(-10);
 
     if (cfg.provider === "gemini") {
-      const model = cfg.model || "gemini-3.8-flash";
-      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": cfg.key },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: sys }] },
-          contents: recent.map(m => ({ role: m.role === "user" ? "user" : "model", parts: [{ text: m.text }] }))
-        })
+      /* Chuỗi dự phòng: model bạn chọn (nếu có) → các bản Flash-Lite (nhanh, ít quá tải) → 3.8 Flash (thông minh hơn, hay quá tải).
+         Lỗi tạm thời (quá tải, hết lượt, timeout, model cũ) → thử model kế tiếp. Lỗi key/quyền → dừng ngay. */
+      const models = [...new Set([cfg.model, ...GEMINI_FALLBACKS].filter(Boolean))];
+      const body = JSON.stringify({
+        systemInstruction: { parts: [{ text: sys }] },
+        contents: recent.map(m => ({ role: m.role === "user" ? "user" : "model", parts: [{ text: m.text }] }))
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error((data.error && data.error.message) || "HTTP " + res.status);
-      return (data.candidates?.[0]?.content?.parts || []).map(p => p.text).join("") || "(AI không trả lời)";
+      let lastErr;
+      for (const model of models) {
+        const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), GEMINI_TIMEOUT_MS);
+        try {
+          const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
+            method: "POST", signal: ctrl.signal,
+            headers: { "Content-Type": "application/json", "x-goog-api-key": cfg.key },
+            body
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            const err = new Error((data.error && data.error.message) || "HTTP " + res.status);
+            err.retryable = [404, 429, 500, 502, 503, 504].includes(res.status);
+            throw err;
+          }
+          const text = (data.candidates?.[0]?.content?.parts || []).map(p => p.text).join("") || "(AI không trả lời)";
+          return model === models[0] ? text : text + "\n\n_(Model chính đang bận – đã trả lời bằng **" + model + "**)_";
+        } catch (e) {
+          if (e.name === "AbortError") { e = new Error(model + " phản hồi quá " + GEMINI_TIMEOUT_MS / 1000 + " giây"); e.retryable = true; }
+          lastErr = e;
+          if (!e.retryable) throw e; // key sai, bị chặn website… → thử model khác cũng vô ích
+        } finally { clearTimeout(timer); }
+      }
+      throw lastErr;
     }
 
     const base = (cfg.base || "https://api.openai.com/v1").replace(/\/$/, "");
