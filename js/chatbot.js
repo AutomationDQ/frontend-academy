@@ -11,6 +11,20 @@
 
   /* ---------------- Kho kiến thức offline ---------------- */
   const KB = [
+    { k: ["node", "nodejs", "node.js"], lesson: "node-intro", a: "**Node.js** là môi trường chạy JavaScript *bên ngoài trình duyệt* (dựa trên V8). Dùng để viết server, công cụ dòng lệnh, script tự động hoá. Chạy file: `node server.js`." },
+    { k: ["express"], lesson: "express-intro", a: "**Express** là framework web tối giản cho Node.js:\n```js\nconst express = require('express');\nconst app = express();\napp.get('/', (req, res) => res.send('Xin chào!'));\napp.listen(3000);\n```" },
+    { k: ["middleware", "next()"], lesson: "express-middleware", a: "**Middleware** là hàm `(req, res, next)` chạy *giữa* request và route. Gọi `next()` để chuyển tiếp, hoặc tự trả response để chặn lại. Ví dụ: `app.use(express.json())` đọc body JSON." },
+    { k: ["rest", "rest api", "crud", "api"], lesson: "rest-crud", a: "**REST API** dùng URL cho *tài nguyên* và HTTP method cho *hành động*: `GET /todos` (đọc), `POST /todos` (tạo – trả 201), `PUT/PATCH /todos/:id` (sửa), `DELETE /todos/:id` (xoá – thường 204)." },
+    { k: ["status code", "ma trang thai", "404", "500", "201", "401", "403"], lesson: "web-how-it-works", a: "Mã trạng thái HTTP: **2xx** thành công (200 OK, 201 Created, 204 No Content) · **4xx** lỗi phía client (400 sai dữ liệu, 401 chưa đăng nhập, 403 không có quyền, 404 không tìm thấy, 409 trùng) · **5xx** lỗi server (500)." },
+    { k: ["sql", "database", "co so du lieu", "sqlite", "select"], lesson: "sql-basics", a: "**SQL** là ngôn ngữ làm việc với cơ sở dữ liệu quan hệ:\n```sql\nSELECT name, age FROM users WHERE age >= 18 ORDER BY age DESC LIMIT 10;\n```\nTrong Node dùng `db.prepare(sql).all(...thamSo)`." },
+    { k: ["join", "left join", "quan he"], lesson: "sql-relations", a: "**JOIN** ghép dữ liệu nhiều bảng theo khoá: `SELECT b.title, a.name FROM books b JOIN authors a ON a.id = b.author_id`. `LEFT JOIN` giữ cả dòng bảng trái không có bản ghi khớp." },
+    { k: ["sql injection", "prepared statement", "injection"], lesson: "api-security", a: "**SQL injection** xảy ra khi nối chuỗi input vào câu SQL. Luôn dùng *prepared statement* với dấu `?`: `db.prepare('SELECT * FROM users WHERE email = ?').get(email)`." },
+    { k: ["bcrypt", "hash", "mat khau", "password"], lesson: "password-hashing", a: "Không bao giờ lưu mật khẩu gốc! Dùng **bcrypt**: `const hash = await bcrypt.hash(pw, 10)` khi đăng ký, `await bcrypt.compare(pw, hash)` khi đăng nhập." },
+    { k: ["jwt", "token", "dang nhap", "xac thuc", "authorization"], lesson: "jwt-auth", a: "**JWT**: server ký token khi đăng nhập `jwt.sign({ id }, SECRET, { expiresIn: '1h' })`; client gửi lại qua header `Authorization: Bearer <token>`; middleware gọi `jwt.verify(token, SECRET)` để xác thực." },
+    { k: ["cors"], lesson: "api-security", a: "**CORS** quy định website nào được gọi API của bạn từ trình duyệt. Trong Express: `app.use(cors({ origin: 'https://ten-mien-cua-ban.com' }))`." },
+    { k: ["env", "bien moi truong", "dotenv", ".env"], lesson: "env-config", a: "Lưu cấu hình/bí mật trong **biến môi trường**: file `.env` (không commit lên Git!) + `require('dotenv').config()`, đọc bằng `process.env.TEN_BIEN`." },
+    { k: ["git", "github", "commit", "push"], lesson: "git-basics", a: "Quy trình Git cơ bản: `git add .` → `git commit -m \"mô tả\"` → `git push`. Lấy code mới: `git pull`. Tạo nhánh: `git switch -c ten-nhanh`." },
+    { k: ["typescript", "ts"], lesson: "typescript-basics", a: "**TypeScript** = JavaScript + kiểu dữ liệu: `function cong(a: number, b: number): number { return a + b; }`. Lỗi kiểu bị phát hiện *trước khi chạy*." },
     { k: ["html la gi", "html"], lesson: "html-intro", a: "**HTML** là ngôn ngữ đánh dấu tạo *bộ khung* trang web bằng các thẻ như `<h1>`, `<p>`, `<img>`. Trình duyệt đọc HTML rồi hiển thị nội dung." },
     { k: ["css la gi", "css"], lesson: "css-intro", a: "**CSS** dùng để trang trí HTML: màu sắc, font, khoảng cách, bố cục, hiệu ứng.\n```css\nh1 { color: tomato; font-size: 32px; }\n```" },
     { k: ["javascript la gi", "js la gi", "javascript"], lesson: "js-variables", a: "**JavaScript** là ngôn ngữ lập trình giúp trang web *tương tác*: xử lý click, tính toán, gọi API, thay đổi nội dung mà không cần tải lại trang." },
@@ -139,7 +153,7 @@
     const L = ctx.lesson;
 
     if (/^(xin chao|chao|hello|hi|hey|alo)\b/.test(q))
-      return "Chào bạn! 👋 Mình là **Bit**, trợ lý học Front-end. Bạn có thể hỏi mình về HTML, CSS, JavaScript, nhờ **kiểm tra code**, xin **gợi ý** bài tập hoặc hỏi **lộ trình học** nhé!";
+      return "Chào bạn! 👋 Mình là **Bit**, trợ lý học lập trình web. Bạn có thể hỏi mình về HTML, CSS, JavaScript, Node.js/Express, SQL, JWT… nhờ **kiểm tra code**, xin **gợi ý** bài tập hoặc hỏi **lộ trình học** nhé!";
     if (has("cam on", "thanks", "thank"))
       return "Không có gì! 😄 Cứ học từ từ, mỗi ngày một chút là sẽ giỏi thôi. Cần gì cứ gọi Bit nhé!";
 
@@ -155,6 +169,7 @@
       if (L) return "💡 **Gợi ý bài \"" + L.title + "\":**\n" + L.exercise.hint + "\n\nThử lại rồi bấm **Kiểm tra bài** nhé. Nếu vẫn kẹt, hãy nhờ mình *kiểm tra code*.";
     }
     if (has("dap an", "loi giai", "solution")) {
+      if (L && L.exercise.type === "quiz") return "📝 Đây là bài trắc nghiệm – hãy thử chọn đáp án và bấm **Kiểm tra bài**: mỗi câu sai đều có giải thích. Nếu vẫn muốn xem, bấm nút **🔑 Xem đáp án** trong bài nhé!";
       if (L) return "🔑 Đây là **một** lời giải tham khảo (bạn cũng có thể bấm nút *Xem đáp án* trong bài):\n" +
         ["html", "css", "js"].filter(k => L.exercise.solution[k]).map(k => "```" + k + "\n" + L.exercise.solution[k] + "\n```").join("") +
         "\nHãy tự gõ lại thay vì copy – não sẽ nhớ lâu hơn nhiều! 🧠";
@@ -164,7 +179,7 @@
       return "📘 **" + L.title + "**\n" + L.summary + "\n\nCác ý chính:\n" + points + "\n\n🎯 Bài tập: " + L.exercise.task;
     }
     if (has("lo trinh", "roadmap", "hoc gi tiep", "bat dau tu dau", "nen hoc gi", "hoc tiep")) {
-      return "🗺️ **Lộ trình gợi ý:**\n1. 🧱 HTML → 2. 🎨 CSS → 3. 📐 Flexbox/Grid/Responsive → 4. ⚡ JavaScript cơ bản → 5. 🖱️ DOM & Sự kiện → 6. 🚀 JS nâng cao (async, JSON)\n\nSau đó: 🌿 Git/GitHub → 📦 npm + Vite → 🌬️ Tailwind → 🔷 TypeScript → ⚛️ React.\n\nMỗi ngày 1 bài + làm 1 mini project mỗi cấp là tiến bộ rất nhanh! Bắt đầu tại: " + lessonLink("html-intro");
+      return "🗺️ **Lộ trình gợi ý (3 khoá trong app):**\n\n**🧱 Front-end Cơ bản:** HTML → CSS → Flexbox/Grid/Responsive → JavaScript → DOM → Async/JSON\n**⚛️ Front-end Nâng cao:** Git & npm → JS hiện đại (class, destructuring, xử lý lỗi) → TypeScript → tư duy Component → a11y, hiệu năng, kiểm thử\n**🟩 Back-end Node.js:** HTTP & Node → Express & REST API → SQL → bcrypt + JWT → triển khai\n\nMỗi ngày 1 bài + 1 mini project mỗi cấp là tiến bộ rất nhanh! " + (ctx.next ? "Bài nên học tiếp: " + lessonLink(ctx.next) : "Bắt đầu tại: " + lessonLink("html-intro"));
     }
     if (has("tien do", "da hoc", "bao nhieu bai")) {
       return "📊 Bạn đã hoàn thành **" + ctx.done + "/" + LESSONS.length + "** bài và có **" + ctx.xp + " XP**. " + (ctx.next ? "Bài tiếp theo nên học: " + lessonLink(ctx.next) : "Bạn đã học xong tất cả – quá đỉnh! 🏆");
@@ -205,11 +220,13 @@
   const GEMINI_TIMEOUT_MS = 20000;
   async function aiReply(history, ctx, cfg) {
     const sys = [
-      "Bạn là Bit – trợ lý dạy lập trình Front-end (HTML, CSS, JavaScript) cho người mới bắt đầu.",
+      "Bạn là Bit – trợ lý dạy lập trình web cho người mới: Front-end (HTML, CSS, JavaScript, TypeScript, Component) và Back-end (Node.js, Express 5, REST API, SQL/SQLite với better-sqlite3, bcrypt, JWT).",
+      "Bài Back-end trong app chạy trên Node.js MÔ PHỎNG trong trình duyệt: hỗ trợ express, http, fs (bộ nhớ), path, crypto, bcryptjs, jsonwebtoken, dotenv, cors, better-sqlite3 (SQL cơ bản + JOIN/GROUP BY); request được gửi qua bảng API Tester.",
+      ctx.course ? "Học viên đang ở khoá: " + ctx.course.name + "." : "",
       "Luôn trả lời bằng tiếng Việt, thân thiện, ngắn gọn, có ví dụ code nhỏ khi cần (dùng ```lang).",
       "Ưu tiên gợi mở để học viên tự làm; chỉ đưa lời giải đầy đủ khi họ yêu cầu rõ ràng.",
       ctx.lesson ? "Học viên đang ở bài: \"" + ctx.lesson.title + "\". Đề bài tập: " + ctx.lesson.exercise.task : "Học viên đang ở trang tổng quan hoặc sân chơi.",
-      ctx.code ? "Code hiện tại của học viên:\nHTML:\n" + ctx.code.html + "\nCSS:\n" + ctx.code.css + "\nJS:\n" + ctx.code.js : ""
+      ctx.code ? (ctx.lesson && ctx.lesson.runtime === "node" ? "Code server.js hiện tại của học viên:\n" + ctx.code.js : "Code hiện tại của học viên:\nHTML:\n" + ctx.code.html + "\nCSS:\n" + ctx.code.css + "\nJS:\n" + ctx.code.js) : ""
     ].join("\n");
     const recent = history.slice(-10);
 

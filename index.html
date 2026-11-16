@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#16a34a">
   <meta name="author" content="Doãn Quảng">
-  <title>Front-end Academy – Học HTML, CSS, JavaScript từ A–Z</title>
+  <title>Front-end Academy – Học Front-end &amp; Back-end (Node.js) từ A–Z</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=9">
+  <link rel="stylesheet" href="css/style.css?v=10">
 </head>
 <body>
   <!-- ============ SIDEBAR ============ -->
@@ -17,13 +17,13 @@
       <span class="brand-logo">🎓</span>
       <div>
         <div class="brand-name">Front-end Academy</div>
-        <div class="brand-sub">Từ con số 0 đến Developer</div>
+        <div class="brand-sub">Front-end &amp; Back-end từ 0 đến Pro</div>
       </div>
     </div>
 
     <div class="progress-card">
       <div class="progress-top">
-        <span>Tiến độ</span>
+        <span id="progressLabel">Tiến độ</span>
         <b id="progressText">0%</b>
       </div>
       <div class="bar"><div class="bar-fill" id="progressBar"></div></div>
@@ -35,6 +35,7 @@
       <button class="nav-btn" data-nav="playground"><span>🧪</span> Sân chơi code</button>
     </nav>
 
+    <div class="course-tabs" id="courseTabs" role="tablist" aria-label="Chọn khoá học"></div>
     <div class="sidebar-search">
       <input id="searchInput" type="search" placeholder="🔍 Tìm bài học...">
     </div>
@@ -111,9 +112,14 @@
   <div class="toast" id="toast"></div>
   <div class="confetti" id="confetti"></div>
 
-  <script src="js/lessons.js?v=9"></script>
-  <script src="js/playground.js?v=9"></script>
-  <script src="js/chatbot.js?v=9"></script>
-  <script src="js/app.js?v=9"></script>
+  <script src="js/lessons.js?v=10"></script>
+  <script src="js/courses.js?v=10"></script>
+  <script src="js/lessons-fe-pro.js?v=10"></script>
+  <script src="js/lessons-backend.js?v=10"></script>
+  <script src="js/lessons-backend-2.js?v=10"></script>
+  <script src="js/node-runtime.js?v=10"></script>
+  <script src="js/playground.js?v=10"></script>
+  <script src="js/chatbot.js?v=10"></script>
+  <script src="js/app.js?v=10"></script>
 </body>
 </html>

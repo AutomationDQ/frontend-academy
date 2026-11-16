@@ -1,6 +1,6 @@
 /* =========================================================
    APP CHÍNH – điều hướng, tiến độ, render giao diện
-   Router dùng hash: #/  |  #/lesson/<id>  |  #/playground
+   Router dùng hash: #/  |  #/course/<id>  |  #/lesson/<id>  |  #/playground
    ========================================================= */
 (function () {
   const $ = s => document.querySelector(s);
@@ -16,6 +16,7 @@
     lastDay: null,
     theme: "light",
     themeV: 2,       // v2: bảng màu xanh lá – trắng – vàng
+    course: "fe-basic", // khoá học đang chọn ở sidebar
     playground: null
   };
   function load() {
@@ -38,8 +39,16 @@
 
   const levelOf = id => LEVELS.find(l => l.id === id);
   const lessonsOf = lv => LESSONS.filter(l => l.level === lv);
-  const doneCount = () => LESSONS.filter(l => state.done[l.id]).length;
-  const nextLesson = () => (LESSONS.find(l => !state.done[l.id]) || {}).id;
+  const courseById = id => COURSES.find(c => c.id === id) || COURSES[0];
+  const courseOf = lesson => courseById(levelOf(lesson.level).course);
+  const levelsOfCourse = cid => LEVELS.filter(l => l.course === cid);
+  const lessonsOfCourse = cid => LESSONS.filter(l => levelOf(l.level).course === cid);
+  const doneCount = (cid) => (cid ? lessonsOfCourse(cid) : LESSONS).filter(l => state.done[l.id]).length;
+  const nextLesson = (cid) => {
+    const list = lessonsOfCourse(cid || state.course);
+    return (list.find(l => !state.done[l.id]) || LESSONS.find(l => !state.done[l.id]) || {}).id;
+  };
+  const levelNo = lv => levelsOfCourse(lv.course).indexOf(lv) + 1;
 
   /* ---------------- Tô màu cú pháp đơn giản ---------------- */
   const RULES = {
@@ -47,8 +56,13 @@
     css: [[/\/\*[\s\S]*?\*\//, "tk-com"], [/@[\w-]+/, "tk-kw"], [/[\w-]+(?=\s*:[^:{]*[;}\n])/, "tk-prop"], [/"[^"]*"|'[^']*'/, "tk-str"], [/#[0-9a-fA-F]{3,8}\b|-?\b\d+(\.\d+)?(px|rem|em|%|s|ms|deg|fr|vh|vw)?\b/, "tk-num"]],
     js: [[/\/\/[^\n]*|\/\*[\s\S]*?\*\//, "tk-com"], [/"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`[^`]*`/, "tk-str"],
       [/\b(const|let|var|function|return|if|else|for|of|in|while|new|async|await|try|catch|throw|class|true|false|null|undefined|typeof|this)\b/, "tk-kw"],
-      [/\b\d+(\.\d+)?\b/, "tk-num"], [/\.[a-zA-Z_]\w*(?=\()/, "tk-prop"]]
+      [/\b\d+(\.\d+)?\b/, "tk-num"], [/\.[a-zA-Z_]\w*(?=\()/, "tk-prop"]],
+    sql: [[/--[^\n]*/, "tk-com"], [/'(?:[^']|'')*'/, "tk-str"],
+      [/\b(SELECT|FROM|WHERE|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|IF|NOT|EXISTS|DROP|AND|OR|NULL|IS|IN|LIKE|BETWEEN|ORDER|BY|GROUP|HAVING|ASC|DESC|LIMIT|OFFSET|AS|JOIN|INNER|LEFT|ON|DISTINCT|PRIMARY|KEY|AUTOINCREMENT|UNIQUE|DEFAULT|REFERENCES|INTEGER|TEXT|REAL|COUNT|SUM|AVG|MIN|MAX)\b/i, "tk-kw"],
+      [/\b\d+(\.\d+)?\b/, "tk-num"]],
+    bash: [[/#[^\n]*/, "tk-com"], [/"[^"]*"|'[^']*'/, "tk-str"], [/^\s*[\w.-]+(?=\s|$)/m, "tk-kw"], [/\s--?[\w-]+/, "tk-attr"]]
   };
+  RULES.ts = RULES.js; RULES.json = RULES.js; RULES.http = RULES.bash;
   function highlight(code, lang) {
     const rules = RULES[lang] || RULES.js;
     const re = new RegExp(rules.map(r => "(" + r[0].source + ")").join("|"), "g");
@@ -83,7 +97,7 @@
       if (b.tip) return '<div class="callout tip"><span class="ci">💡</span><div>' + inline(b.tip) + "</div></div>";
       if (b.warn) return '<div class="callout warn"><span class="ci">⚠️</span><div>' + inline(b.warn) + "</div></div>";
       if (b.code !== undefined) {
-        const lang = guessLang(b.code);
+        const lang = b.lang || guessLang(b.code);
         return '<div class="code-block"><button class="copy">📋 Copy</button><pre><code data-lang="' + lang + '">' + highlight(b.code, lang) + "</code></pre></div>";
       }
       return "";
@@ -123,7 +137,9 @@
 
   /* ---------------- Sidebar ---------------- */
   function renderProgress() {
-    const pct = Math.round(doneCount() / LESSONS.length * 100);
+    const c = courseById(state.course);
+    const pct = Math.round(doneCount(c.id) / lessonsOfCourse(c.id).length * 100);
+    $("#progressLabel").textContent = "Tiến độ · " + c.short;
     $("#progressText").textContent = pct + "%";
     $("#progressBar").style.width = pct + "%";
     $("#xpText").textContent = state.xp;
@@ -134,12 +150,18 @@
     const f = filter.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
     const match = l => !f || (l.title + " " + l.summary).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().includes(f);
     const current = currentLessonId();
-    $("#levelList").innerHTML = LEVELS.map((lv, i) => {
+    $("#courseTabs").innerHTML = COURSES.map(c => `<button class="course-tab ${c.id === state.course ? "active" : ""}" role="tab" aria-selected="${c.id === state.course}" data-course="${c.id}" title="${c.name}">${c.icon}<br>${c.short}</button>`).join("");
+    $("#courseTabs").querySelectorAll(".course-tab").forEach(b => b.addEventListener("click", () => {
+      state.course = b.dataset.course; save(); renderSidebar($("#searchInput").value);
+    }));
+    const levels = f ? LEVELS : levelsOfCourse(state.course);   // đang tìm kiếm → tìm trong mọi khoá
+    $("#levelList").innerHTML = levels.map(lv => {
       const ls = lessonsOf(lv.id).filter(match);
       if (!ls.length) return "";
       const d = lessonsOf(lv.id).filter(l => state.done[l.id]).length;
+      const prefix = f ? courseById(lv.course).short + " · " : "Cấp " + levelNo(lv) + " · ";
       return `<div class="level-group">
-        <div class="level-head"><span class="level-dot" style="background:${lv.color}"></span>${lv.icon} Cấp ${i + 1} · ${lv.name}<span class="count">${d}/${lessonsOf(lv.id).length}</span></div>
+        <div class="level-head"><span class="level-dot" style="background:${lv.color}"></span>${lv.icon} ${prefix}${lv.name}<span class="count">${d}/${lessonsOf(lv.id).length}</span></div>
         <div class="lessons">${ls.map(l => `
           <button class="lesson-link ${l.id === current ? "active" : ""}" data-lesson="${l.id}">
             <span class="ic">${l.icon}</span><span>${esc(l.title)}</span>
@@ -162,6 +184,7 @@
   function route() {
     const h = location.hash.replace(/^#\/?/, "").split("/");
     if (h[0] === "lesson" && LESSONS.find(l => l.id === h[1])) return { page: "lesson", id: h[1] };
+    if (h[0] === "course" && COURSES.find(c => c.id === h[1])) return { page: "course", id: h[1] };
     if (h[0] === "playground") return { page: "playground" };
     return { page: "home" };
   }
@@ -175,6 +198,7 @@
     const view = $("#view");
     view.style.animation = "none"; void view.offsetWidth; view.style.animation = "";
     if (r.page === "lesson") renderLesson(r.id);
+    else if (r.page === "course") renderCourse(r.id);
     else if (r.page === "playground") renderPlayground();
     else renderHome();
     renderSidebar($("#searchInput").value);
@@ -184,6 +208,20 @@
   }
 
   /* ---------------- Trang chủ ---------------- */
+  function courseCard(c) {
+    const ls = lessonsOfCourse(c.id), d = doneCount(c.id), min = ls.reduce((t, l) => t + l.duration, 0);
+    const isNew = c.id !== "fe-basic" && d === 0;
+    return `<div class="course-card" style="--c:${c.color}" data-go="#/course/${c.id}">
+      ${isNew ? '<span class="cc-badge">MỚI</span>' : ""}
+      <div class="cc-ic">${c.icon}</div>
+      <h3>${c.name}</h3>
+      <p>${c.desc}</p>
+      <div class="cc-tags">${c.tags.map(t => `<span>${t}</span>`).join("")}</div>
+      <div class="cc-meta"><span>📘 ${ls.length} bài · ${levelsOfCourse(c.id).length} cấp · ~${Math.round(min / 60)} giờ</span><span>${d === ls.length ? "🏅 Xong" : d + "/" + ls.length}</span></div>
+      <div class="lv-bar"><div style="width:${d / ls.length * 100}%"></div></div>
+    </div>`;
+  }
+
   function renderHome() {
     $("#crumbs").innerHTML = "<b>🏠 Trang chủ</b>";
     const nx = nextLesson();
@@ -191,12 +229,12 @@
     $("#view").innerHTML = `
       <section class="hero">
         <span class="hero-float" style="right:8%;top:18%">🧱</span>
-        <span class="hero-float" style="right:22%;top:55%;animation-delay:-2s">🎨</span>
-        <span class="hero-float" style="right:6%;top:65%;animation-delay:-4s">⚡</span>
-        <span class="hero-float" style="right:30%;top:12%;animation-delay:-3s">🚀</span>
+        <span class="hero-float" style="right:22%;top:55%;animation-delay:-2s">⚛️</span>
+        <span class="hero-float" style="right:6%;top:65%;animation-delay:-4s">🟩</span>
+        <span class="hero-float" style="right:30%;top:12%;animation-delay:-3s">🗄️</span>
         <div style="font-size:13px;opacity:.8;margin-bottom:10px">👋 Chào mừng đến với Front-end Academy</div>
-        <h1>Học lập trình web<br><span>từ A đến Z</span> – học đâu chạy đó</h1>
-        <p>${LESSONS.length} bài học chia thành ${LEVELS.length} cấp độ, từ HTML cơ bản đến JavaScript bất đồng bộ. Mỗi bài có ví dụ chạy thử ngay, bài tập tự chấm điểm và trợ lý <b>Bit 🤖</b> luôn sẵn sàng giải đáp.</p>
+        <h1>Học lập trình web<br><span>Front-end → Back-end</span> – học đâu chạy đó</h1>
+        <p>${COURSES.length} khoá học · ${LESSONS.length} bài, từ HTML cơ bản đến REST API với Node.js, SQL và JWT. Mỗi bài có ví dụ chạy thử ngay (kể cả server Back-end mô phỏng ngay trong trình duyệt), bài tập tự chấm điểm và trợ lý <b>Bit 🤖</b>.</p>
         <div class="hero-actions">
           <button class="btn primary" id="startBtn">${doneCount() ? "▶ Học tiếp" : "🚀 Bắt đầu học ngay"}</button>
           <button class="btn" data-go="#/playground">🧪 Mở sân chơi code</button>
@@ -210,20 +248,8 @@
         <div class="stat"><div class="stat-ic">⏱️</div><div><b>~${Math.round(totalMin / 60)} giờ</b><small>Tổng thời lượng</small></div></div>
       </div>
 
-      <h2 class="section-title">🗺️ Lộ trình học</h2>
-      <div class="levels">
-        ${LEVELS.map((lv, i) => {
-          const ls = lessonsOf(lv.id), d = ls.filter(l => state.done[l.id]).length;
-          return `<div class="level-card" style="--c:${lv.color}" data-go="#/lesson/${(ls.find(l => !state.done[l.id]) || ls[0]).id}">
-            <div class="lv-ic">${lv.icon}</div>
-            <div class="lv-step">Cấp ${i + 1}</div>
-            <h3>${lv.name}</h3>
-            <p>${lv.desc}</p>
-            <div class="lv-meta"><span>📘 ${ls.length} bài · ${ls.reduce((t, l) => t + l.duration, 0)} phút</span><span>${d === ls.length ? "🏅 Hoàn thành" : d + "/" + ls.length}</span></div>
-            <div class="lv-bar"><div style="width:${d / ls.length * 100}%"></div></div>
-          </div>`;
-        }).join("")}
-      </div>
+      <h2 class="section-title">🎓 Khoá học</h2>
+      <div class="courses">${COURSES.map(courseCard).join("")}</div>
 
       <h2 class="section-title">🔭 Học gì tiếp theo?</h2>
       <div class="next-grid">
@@ -236,8 +262,42 @@
     $("#view").querySelectorAll("[data-go]").forEach(el => el.addEventListener("click", () => go(el.dataset.go)));
   }
 
+  /* ---------------- Trang khoá học ---------------- */
+  function renderCourse(cid) {
+    const c = courseById(cid);
+    state.course = cid; save();
+    const ls = lessonsOfCourse(cid), d = doneCount(cid);
+    $("#crumbs").innerHTML = `<a href="#/">🏠</a> › <b>${c.icon} ${c.name}</b>`;
+    $("#view").innerHTML = `
+      <section class="course-hero" style="--c:${c.color}">
+        <div class="cc-ic">${c.icon}</div>
+        <div style="flex:1">
+          <h1>${c.name}</h1>
+          <p>${c.desc}</p>
+          <p style="margin-top:8px;font-size:13px">📘 ${ls.length} bài · ⏱️ ~${Math.round(ls.reduce((t, l) => t + l.duration, 0) / 60)} giờ · ✅ ${d}/${ls.length} hoàn thành</p>
+        </div>
+        <button class="btn primary" data-go="#/lesson/${nextLesson(cid)}">${d ? "▶ Học tiếp" : "🚀 Bắt đầu khoá"}</button>
+      </section>
+      <h2 class="section-title">🗺️ Lộ trình</h2>
+      <div class="levels">
+        ${levelsOfCourse(cid).map(lv => {
+          const lls = lessonsOf(lv.id), dd = lls.filter(l => state.done[l.id]).length;
+          return `<div class="level-card" style="--c:${lv.color}" data-go="#/lesson/${(lls.find(l => !state.done[l.id]) || lls[0]).id}">
+            <div class="lv-ic">${lv.icon}</div>
+            <div class="lv-step">Cấp ${levelNo(lv)}</div>
+            <h3>${lv.name}</h3>
+            <p>${lv.desc}</p>
+            <div class="lv-meta"><span>📘 ${lls.length} bài · ${lls.reduce((t, l) => t + l.duration, 0)} phút</span><span>${dd === lls.length ? "🏅 Hoàn thành" : dd + "/" + lls.length}</span></div>
+            <div class="lv-bar"><div style="width:${dd / lls.length * 100}%"></div></div>
+          </div>`;
+        }).join("")}
+      </div>`;
+    $("#view").querySelectorAll("[data-go]").forEach(el => el.addEventListener("click", () => go(el.dataset.go)));
+  }
+
   /* ---------------- Trang bài học ---------------- */
   function defaultTab(lesson, code) {
+    if (lesson.runtime === "node") return "js";
     if (["js", "advanced"].includes(lesson.level) && !code.html.trim()) return "js";
     if (["css", "layout"].includes(lesson.level)) return "css";
     if (lesson.level === "dom" || lesson.level === "advanced") return "js";
@@ -248,24 +308,29 @@
     const lesson = LESSONS.find(l => l.id === id);
     currentLesson = lesson;
     const lv = levelOf(lesson.level);
-    const lvIdx = LEVELS.indexOf(lv) + 1;
-    const idx = LESSONS.indexOf(lesson);
-    const prev = LESSONS[idx - 1], next = LESSONS[idx + 1];
+    const course = courseOf(lesson);
+    state.course = course.id; save();
+    const lvIdx = levelNo(lv);
+    const courseLessons = lessonsOfCourse(course.id);
+    const idx = courseLessons.indexOf(lesson);
+    const prev = courseLessons[idx - 1], next = courseLessons[idx + 1];
+    const nextCourse = !next ? COURSES[COURSES.indexOf(course) + 1] : null;
     const ex = lesson.exercise;
+    const isQuiz = ex.type === "quiz";
     let fails = 0;
 
-    $("#crumbs").innerHTML = `${lv.icon} Cấp ${lvIdx} · ${lv.name} › <b>${esc(lesson.title)}</b>`;
+    $("#crumbs").innerHTML = `<a href="#/course/${course.id}">${course.icon} ${course.short}</a> › ${lv.icon} Cấp ${lvIdx} · ${lv.name} › <b>${esc(lesson.title)}</b>`;
     $("#view").innerHTML = `
       <div class="lesson-wrap">
         <article class="lesson-content" style="--c:${lv.color}">
-          <span class="lesson-badge">${lv.icon} Cấp ${lvIdx} · Bài ${lessonsOf(lv.id).indexOf(lesson) + 1}/${lessonsOf(lv.id).length}</span>
+          <span class="lesson-badge">${course.icon} ${course.short} · ${lv.icon} Cấp ${lvIdx} · Bài ${lessonsOf(lv.id).indexOf(lesson) + 1}/${lessonsOf(lv.id).length}${lesson.runtime === "node" ? " · 🟩 Node.js" : ""}${isQuiz ? " · 📝 Trắc nghiệm" : ""}</span>
           <div class="lesson-title"><div class="big-ic">${lesson.icon}</div><h1>${esc(lesson.title)}</h1></div>
           <div class="lesson-meta"><span>⏱️ ${lesson.duration} phút</span><span>⭐ +100 XP</span>${state.done[id] ? '<span class="done-badge">✅ Đã hoàn thành</span>' : ""}</div>
           <p style="color:var(--muted)">${esc(lesson.summary)}</p>
           ${renderBlocks(lesson.content)}
 
           <div class="exercise-card">
-            <h3>🎯 Bài tập thực hành</h3>
+            <h3>${isQuiz ? "📝 Bài trắc nghiệm" : "🎯 Bài tập thực hành"}</h3>
             <p>${inline(ex.task)}</p>
             <div class="ex-actions">
               <button class="btn primary sm" id="checkBtn">✅ Kiểm tra bài</button>
@@ -276,31 +341,55 @@
             <div class="hint-box" id="hintBox" hidden></div>
             <div class="result" id="result"></div>
             <div class="ex-next" id="exNext" hidden>
-              <span>${next ? "Hoàn thành rồi! Sẵn sàng cho bài tiếp theo chưa?" : "🏆 Bạn đã học xong bài cuối cùng của khoá!"}</span>
+              <span>${next ? "Hoàn thành rồi! Sẵn sàng cho bài tiếp theo chưa?" : "🏆 Bạn đã học xong bài cuối cùng của khoá " + course.name + "!"}</span>
               ${next
                 ? `<button class="btn primary" id="nextBtn" data-go="#/lesson/${next.id}">Bài tiếp: ${next.icon} ${esc(next.title)} →</button>`
-                : `<button class="btn primary" id="nextBtn" data-go="#/">🏠 Về trang chủ</button>`}
+                : nextCourse
+                  ? `<button class="btn primary" id="nextBtn" data-go="#/course/${nextCourse.id}">Sang khoá tiếp: ${nextCourse.icon} ${nextCourse.name} →</button>`
+                  : `<button class="btn primary" id="nextBtn" data-go="#/">🏠 Về trang chủ</button>`}
             </div>
           </div>
 
           <div class="lesson-nav">
             ${prev ? `<button class="btn" data-go="#/lesson/${prev.id}">← ${prev.icon} ${esc(prev.title)}</button>` : "<span></span>"}
-            ${next ? `<button class="btn primary" data-go="#/lesson/${next.id}">${next.icon} ${esc(next.title)} →</button>` : `<button class="btn primary" data-go="#/">🏆 Về trang chủ</button>`}
+            ${next ? `<button class="btn primary" data-go="#/lesson/${next.id}">${next.icon} ${esc(next.title)} →</button>` : nextCourse ? `<button class="btn primary" data-go="#/course/${nextCourse.id}">${nextCourse.icon} ${nextCourse.name} →</button>` : `<button class="btn primary" data-go="#/">🏆 Về trang chủ</button>`}
           </div>
         </article>
 
         <div>
+          ${isQuiz ? '<div class="quiz-box" id="quizBox"></div>' : `
           <div class="mode-switch">
             <button data-mode="example">👀 Ví dụ mẫu</button>
             <button data-mode="exercise">🎯 Làm bài tập</button>
           </div>
-          <div id="pgBox"></div>
+          <div id="pgBox"></div>`}
         </div>
       </div>`;
 
     const view = $("#view");
     bindCopy(view);
     view.querySelectorAll("[data-go]").forEach(el => el.addEventListener("click", () => go(el.dataset.go)));
+
+    const result = $("#result");
+    const exNext = $("#exNext");
+    const showNext = (scroll) => {
+      exNext.hidden = false;
+      if (scroll) exNext.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+    if (state.done[id]) showNext(false); // bài đã xong trước đó: hiện nút ngay
+    const show = (ok, msg) => { result.className = "result " + (ok ? "ok" : "fail"); result.textContent = (ok ? "🎉 " : "❌ ") + msg; };
+    const passed = () => {
+      if (!state.done[id]) {
+        state.done[id] = true; state.xp += 100; touchStreak(); save();
+        toast("⭐ +100 XP – " + lesson.title);
+        renderSidebar($("#searchInput").value);
+      }
+      confetti();
+      showNext(true);
+    };
+    $("#hintBtn").addEventListener("click", () => { const h = $("#hintBox"); h.hidden = !h.hidden; h.textContent = "💡 " + ex.hint; });
+
+    if (isQuiz) { setupQuiz(lesson, { show, passed }); return; }
 
     // Hai bộ đệm code: ví dụ (không lưu) và bài tập (lưu localStorage)
     const buffers = {
@@ -311,6 +400,9 @@
 
     pg = new Playground($("#pgBox"), {
       code: buffers[mode],
+      runtime: lesson.runtime,
+      nodeConfig: { env: lesson.env || {}, files: lesson.files || {} },
+      requests: (mode === "example" ? lesson.exampleRequests : null) || lesson.requests || [],
       active: defaultTab(lesson, buffers[mode]),
       onChange: code => {
         if (mode === "exercise") { buffers.exercise = code; state.code[id] = code; save(); }
@@ -322,6 +414,7 @@
       buffers[mode] = pg.getCode();
       mode = m;
       view.querySelectorAll(".mode-switch button").forEach(b => b.classList.toggle("active", b.dataset.mode === m));
+      if (pg.setRequests) pg.setRequests((m === "example" ? lesson.exampleRequests : null) || lesson.requests || []);
       pg.setCode(buffers[m]);
       pg.switchTab(defaultTab(lesson, buffers[m]));
     };
@@ -330,15 +423,6 @@
       b.addEventListener("click", () => setMode(b.dataset.mode));
     });
 
-    const result = $("#result");
-    const exNext = $("#exNext");
-    const showNext = (scroll) => {
-      exNext.hidden = false;
-      if (scroll) exNext.scrollIntoView({ behavior: "smooth", block: "center" });
-    };
-    if (state.done[id]) showNext(false); // bài đã xong trước đó: hiện nút ngay
-    const show = (ok, msg) => { result.className = "result " + (ok ? "ok" : "fail"); result.textContent = (ok ? "🎉 " : "❌ ") + msg; };
-
     $("#checkBtn").addEventListener("click", async () => {
       if (mode !== "exercise") setMode("exercise");
       const btn = $("#checkBtn");
@@ -346,15 +430,8 @@
       const r = await pg.check(ex.check);
       btn.disabled = false; btn.textContent = "✅ Kiểm tra bài";
       show(r.pass, r.msg);
-      if (r.pass) {
-        if (!state.done[id]) {
-          state.done[id] = true; state.xp += 100; touchStreak(); save();
-          toast("⭐ +100 XP – " + lesson.title);
-          renderSidebar($("#searchInput").value);
-        }
-        confetti();
-        showNext(true);
-      } else {
+      if (r.pass) passed();
+      else {
         fails++;
         if (fails === 2 && window.Chatbot) {
           const issues = window.analyzeCode(pg.getCode());
@@ -362,7 +439,6 @@
         }
       }
     });
-    $("#hintBtn").addEventListener("click", () => { const h = $("#hintBox"); h.hidden = !h.hidden; h.textContent = "💡 " + ex.hint; });
     $("#resetEx").addEventListener("click", () => {
       if (!confirm("Xoá code bài tập hiện tại và bắt đầu lại?")) return;
       delete state.code[id]; save();
@@ -376,6 +452,47 @@
       if (mode === "exercise") pg.setCode(buffers.exercise); else setMode("exercise");
       state.code[id] = buffers.exercise; save();
       toast("🔑 Đã nạp đáp án – hãy đọc hiểu từng dòng nhé!");
+    });
+  }
+
+  /* ---------------- Bài trắc nghiệm ---------------- */
+  function setupQuiz(lesson, ui) {
+    const id = lesson.id, ex = lesson.exercise, box = $("#quizBox");
+    const saved = (state.code[id] && state.code[id].quiz) || [];
+    let answers = ex.questions.map((_, i) => saved[i] === undefined ? null : saved[i]);
+    let graded = false;
+    const persist = () => { state.code[id] = { quiz: answers }; save(); };
+    const draw = () => {
+      box.innerHTML = `<h3>📝 ${ex.questions.length} câu hỏi</h3><p class="muted" style="font-size:13px">Chọn đáp án cho từng câu rồi bấm <b>✅ Kiểm tra bài</b>.</p>` +
+        ex.questions.map((q, i) => `<div class="quiz-q">
+          <p>${i + 1}. ${inline(q.q)}</p>
+          ${q.code ? `<pre>${esc(q.code)}</pre>` : ""}
+          ${q.options.map((o, j) => {
+            const cls = [answers[i] === j ? "sel" : "", graded && j === q.answer && answers[i] === j ? "right" : "", graded && answers[i] === j && j !== q.answer ? "wrong" : ""].join(" ");
+            return `<button class="quiz-opt ${cls}" data-q="${i}" data-o="${j}"><span class="k">${"ABCD"[j]}</span><span>${inline(o)}</span></button>`;
+          }).join("")}
+          <div class="quiz-explain" ${graded && answers[i] !== null ? "" : "hidden"}>${answers[i] === q.answer ? "✅ " : "❌ "}${inline(q.explain || "")}</div>
+        </div>`).join("");
+      box.querySelectorAll(".quiz-opt").forEach(b => b.addEventListener("click", () => {
+        answers[+b.dataset.q] = +b.dataset.o; graded = false; persist(); draw();
+      }));
+    };
+    draw();
+    $("#checkBtn").addEventListener("click", () => {
+      const missing = answers.map((a, i) => a === null ? i + 1 : 0).filter(Boolean);
+      if (missing.length) { ui.show(false, "Bạn chưa trả lời câu " + missing.join(", ") + "."); return; }
+      graded = true; draw();
+      const wrong = ex.questions.map((q, i) => answers[i] !== q.answer ? i + 1 : 0).filter(Boolean);
+      if (wrong.length) ui.show(false, "Đúng " + (ex.questions.length - wrong.length) + "/" + ex.questions.length + ". Xem lại câu " + wrong.join(", ") + " – đọc giải thích bên dưới mỗi câu nhé.");
+      else { ui.show(true, "Xuất sắc! Bạn trả lời đúng cả " + ex.questions.length + " câu."); ui.passed(); }
+    });
+    $("#resetEx").addEventListener("click", () => {
+      answers = ex.questions.map(() => null); graded = false; persist(); draw(); $("#result").className = "result";
+    });
+    $("#solBtn").addEventListener("click", () => {
+      if (!confirm("Hiện đáp án đúng cho tất cả câu hỏi?")) return;
+      answers = ex.questions.map(q => q.answer); graded = true; persist(); draw();
+      toast("🔑 Đã hiện đáp án – đọc kỹ phần giải thích nhé!");
     });
   }
 
@@ -458,6 +575,7 @@
     Chatbot.init(
       () => ({
         lesson: currentLesson,
+        course: currentLesson ? courseOf(currentLesson) : courseById(state.course),
         code: pg ? pg.getCode() : null,
         done: doneCount(),
         xp: state.xp,
