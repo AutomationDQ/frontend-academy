@@ -552,6 +552,21 @@ body.light .result.fail { color: var(--danger); }
 .cert-line { width: 22cqi; height: 1.5px; background: #14301f; margin: .5cqi 0 .4cqi; }
 .cert-id { position: absolute; bottom: 3.2%; left: 0; right: 0; font-size: 1.15cqi; color: #5a7464; font-family: var(--mono); }
 
+/* ---- Xem trước chứng nhận ---- */
+.cert.is-preview .cert-inner { overflow: hidden; }
+.cert-watermark { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; z-index: 2;
+  font-family: 'Playfair Display', Georgia, serif; font-weight: 800; font-size: 9cqi; letter-spacing: .4cqi; white-space: nowrap;
+  color: rgba(220, 38, 38, .13); transform: rotate(-18deg); }
+.cert-preview-head { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-end; justify-content: space-between; margin-bottom: 14px; }
+.cert-preview-head h1 { margin: 0 0 4px; }
+.cert-preview-head p { margin: 0; max-width: 640px; }
+.admin-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+.admin-bar input { flex: 1; min-width: 240px; padding: 11px 13px; border-radius: 12px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); font-family: inherit; font-size: 15px; outline: none; }
+.admin-bar input:focus { border-color: var(--primary); }
+.admin-tools { margin-top: 22px; padding: 14px 16px; border: 1px dashed var(--border); border-radius: 14px; }
+.admin-tools summary { cursor: pointer; font-weight: 700; }
+.hash-out { display: block; word-break: break-all; font-family: var(--mono); font-size: 12.5px; }
+
 .verify-box { max-width: 640px; margin: 20px auto; padding: 26px; background: var(--panel); border: 1px solid var(--border); border-radius: 22px; }
 .verify-box h1 { margin: 0 0 6px; }
 .verify-form { display: flex; gap: 8px; margin: 14px 0; flex-wrap: wrap; }

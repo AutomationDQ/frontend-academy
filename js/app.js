@@ -196,6 +196,7 @@
     if (h[0] === "certificates") return { page: "certificates" };
     if (h[0] === "profile") return { page: "profile" };
     if (h[0] === "certificate" && COURSES.find(c => c.id === h[1])) return { page: "certificate", id: h[1] };
+    if (h[0] === "admin") return { page: "admin", id: COURSES.find(c => c.id === h[1]) ? h[1] : COURSES[0].id };
     if (h[0] === "verify") return { page: "verify", id: decodeURIComponent(h[1] || "") };
     return { page: "home" };
   }
@@ -214,6 +215,7 @@
     else if (r.page === "certificates") renderCertificates();
     else if (r.page === "profile") renderProfile();
     else if (r.page === "certificate") renderCertificate(r.id);
+    else if (r.page === "admin") renderAdmin(r.id);
     else if (r.page === "verify") renderVerify(r.id);
     else if (r.page === "playground") renderPlayground();
     else renderHome();
@@ -807,6 +809,75 @@
     $("#view").querySelectorAll("[data-go]").forEach(el => el.addEventListener("click", () => go(el.dataset.go)));
     if ($("#regNow")) $("#regNow").addEventListener("click", () => Account.openModal({ onDone: render }));
     $("#verifyForm").addEventListener("submit", e => { e.preventDefault(); const v = $("#verifyInput").value.trim(); if (v) go("#/verify/" + encodeURIComponent(v.toUpperCase())); });
+  }
+
+  /* ---------------- Quản trị (chỉ chủ web) ----------------
+     Mở bằng #/admin + mật khẩu. Web tĩnh nên đây là "khoá cửa" phía trình duyệt:
+     đủ để học viên không thấy, nhưng không dùng để bảo vệ dữ liệu bí mật. */
+  const ADMIN_KEY = "fa_admin_unlock";
+  async function sha256(text) {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(buf), b => b.toString(16).padStart(2, "0")).join("");
+  }
+  const isAdmin = () => { try { return !!ACADEMY_CONFIG.adminKeyHash && localStorage.getItem(ADMIN_KEY) === ACADEMY_CONFIG.adminKeyHash; } catch (e) { return false; } };
+
+  function renderAdmin(cid) {
+    $("#crumbs").innerHTML = "<b>🛠 Quản trị</b>";
+    const view = $("#view");
+    if (!isAdmin()) {
+      view.innerHTML = `
+        <section class="locked">
+          <div class="locked-ic">🔒</div><h1>Khu vực quản trị</h1>
+          <p>Trang này chỉ dành cho người quản lý Front-end Academy.</p>
+          <form class="verify-form admin-form" id="adminForm" style="justify-content:center">
+            <input id="adminPass" type="password" placeholder="Mật khẩu quản trị" autocomplete="current-password" aria-label="Mật khẩu quản trị" style="text-transform:none">
+            <button class="btn primary">Mở khoá</button>
+          </form>
+          <p class="form-msg" id="adminMsg" role="status"></p>
+        </section>`;
+      $("#adminForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        const h = await sha256("fa-admin:" + $("#adminPass").value);
+        if (ACADEMY_CONFIG.adminKeyHash && h === ACADEMY_CONFIG.adminKeyHash) { try { localStorage.setItem(ADMIN_KEY, h); } catch (err) {} toast("🔓 Đã mở khoá quản trị"); render(); }
+        else { $("#adminMsg").textContent = "⚠️ Sai mật khẩu"; $("#adminPass").select(); }
+      });
+      setTimeout(() => $("#adminPass") && $("#adminPass").focus(), 50);
+      return;
+    }
+    const c = courseById(cid), ls = lessonsOfCourse(cid);
+    const defName = view.dataset.previewName || (Account.isRegistered() ? Account.profile.name : "Nguyễn Văn A");
+    const fmtName = v => v.trim().replace(/\s+/g, " ").toLowerCase().replace(/(^|\s)\S/g, m => m.toUpperCase());
+    const cert = n => Account.sampleCert(fmtName(n) || "Họ và tên học viên", c, { lessons: ls.length, hours: courseHours(cid) });
+    view.innerHTML = `
+      <div class="cert-preview-head">
+        <div><h1>🛠 Xem trước chứng nhận</h1>
+          <p class="muted">Chỉ bạn thấy trang này. Nhập họ tên học viên để xem chứng nhận trông thế nào trước khi cấp.</p></div>
+        <div class="cert-actions"><button class="btn ghost" id="adminLock">🔒 Khoá lại</button></div>
+      </div>
+      <div class="admin-bar">
+        <input id="pvName" value="${esc(defName)}" placeholder="Họ và tên học viên" aria-label="Họ và tên học viên">
+        <div class="cert-actions" style="margin:0">
+          ${COURSES.map(x => `<button class="btn ${x.id === cid ? "primary" : "ghost"}" data-go="#/admin/${x.id}">${x.icon} ${x.short}</button>`).join("")}
+        </div>
+      </div>
+      <div class="cert-scroll" id="pvCert">${Account.certificateHTML(cert(defName))}</div>
+      <details class="admin-tools"><summary>🔑 Tạo mã băm cho mật khẩu mới</summary>
+        <p class="muted">Nhập mật khẩu mới → sao chép mã băm → dán vào <code>adminKeyHash</code> trong <code>js/config.js</code> → đẩy lên GitHub.</p>
+        <form class="verify-form" id="hashForm"><input id="newPass" type="password" placeholder="Mật khẩu mới (≥ 10 ký tự)" style="text-transform:none"><button class="btn">Tạo mã băm</button></form>
+        <code class="hash-out" id="hashOut"></code>
+      </details>`;
+    view.querySelectorAll("[data-go]").forEach(el => el.addEventListener("click", () => { view.dataset.previewName = $("#pvName").value; go(el.dataset.go); }));
+    $("#pvName").addEventListener("input", e => {
+      view.querySelector(".cert-name").textContent = fmtName(e.target.value) || "Họ và tên học viên";
+      view.dataset.previewName = e.target.value;
+    });
+    $("#adminLock").addEventListener("click", () => { try { localStorage.removeItem(ADMIN_KEY); } catch (e) {} delete view.dataset.previewName; toast("🔒 Đã khoá quản trị"); render(); });
+    $("#hashForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const v = $("#newPass").value;
+      if (v.length < 10) { $("#hashOut").textContent = "⚠️ Mật khẩu cần ít nhất 10 ký tự"; return; }
+      $("#hashOut").textContent = await sha256("fa-admin:" + v);
+    });
   }
 
   function renderCertificate(cid) {

@@ -168,12 +168,22 @@
 
   function verifyUrl(id) { return (CFG().siteUrl || location.href.split("#")[0]) + "#/verify/" + encodeURIComponent(id); }
 
+  /* Chứng nhận mẫu để xem trước (không có mã thật, không lưu, không xác minh được) */
+  function sampleCert(name, course, extra) {
+    const c = course || (typeof COURSES !== "undefined" ? COURSES[0] : { name: "Front-end Cơ bản" });
+    let lessons = "";
+    try { const lv = new Set(LEVELS.filter(l => (l.course || "fe-basic") === c.id).map(l => l.id)); lessons = LESSONS.filter(l => lv.has(l.level)).length || ""; } catch (e) { /* chưa nạp dữ liệu bài học */ }
+    return Object.assign({ name: name || "Họ và tên của bạn", courseName: c.name, lessons, hours: 0,
+      issuedAt: new Date().toLocaleDateString("vi-VN"), certId: "FA-XXX-XXXXXX-XXXXX", verified: false, preview: true }, extra || {});
+  }
+
   /* Giao diện tờ chứng nhận (A4 ngang). cert: {name, courseName, lessons, hours, issuedAt, certId, verified} */
   function certificateHTML(cert) {
     const day = String(cert.issuedAt || "").split(" ")[0];
     return `
-      <div class="cert" id="certSheet">
+      <div class="cert${cert.preview ? " is-preview" : ""}"${cert.preview ? "" : ' id="certSheet"'}>
         <div class="cert-inner">
+          ${cert.preview ? '<div class="cert-watermark" aria-hidden="true">BẢN XEM TRƯỚC</div>' : ""}
           <div class="cert-corner tl"></div><div class="cert-corner tr"></div><div class="cert-corner bl"></div><div class="cert-corner br"></div>
           <div class="cert-brand"><span>🎓</span> Front-end Academy</div>
           <div class="cert-kicker">GIẤY CHỨNG NHẬN</div>
@@ -198,7 +208,7 @@
               <small>${esc(CFG().issuerTitle || "Người cấp chứng nhận")}</small>
             </div>
           </div>
-          <div class="cert-id">Mã chứng nhận: <b>${esc(cert.certId)}</b>${cert.verified ? " · Xác minh tại: " + esc(verifyUrl(cert.certId).replace(/^https?:\/\//, "")) : " · ⚠️ Bản lưu trên máy – chưa xác minh online"}</div>
+          <div class="cert-id">${cert.preview ? "Bản xem trước · Chứng nhận chính thức có mã riêng, được cấp khi hoàn thành 100% bài học" : `Mã chứng nhận: <b>${esc(cert.certId)}</b>${cert.verified ? " · Xác minh tại: " + esc(verifyUrl(cert.certId).replace(/^https?:\/\//, "")) : " · ⚠️ Bản lưu trên máy – chưa xác minh online"}`}</div>
         </div>
       </div>`;
   }
@@ -209,7 +219,7 @@
     get certs() { return data.certs; },
     isRegistered: () => !!(data.profile && data.profile.email),
     online: () => !!CFG().appsScriptUrl,
-    openModal, renderSidebar, syncRegister, issue, verify, verifyUrl, certificateHTML,
+    openModal, renderSidebar, syncRegister, issue, verify, verifyUrl, certificateHTML, sampleCert,
     resync() { if (data.profile && !data.profile.learnerId) { data.pendingRegister = true; save(); } return syncRegister(); },
     restore(acc) {   // khôi phục từ file sao lưu (chỉ nhận cấu trúc hợp lệ)
       if (!acc || !acc.profile || !acc.profile.email || !acc.profile.name) return;
