@@ -8,7 +8,7 @@
   <title>Front-end Academy – Học HTML, CSS, JavaScript từ A–Z</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=6">
+  <link rel="stylesheet" href="css/style.css?v=7">
 </head>
 <body>
   <!-- ============ SIDEBAR ============ -->
@@ -83,7 +83,8 @@
           <option value="openai">OpenAI / API tương thích</option>
         </select>
       </label>
-      <label>API key <input id="aiKey" type="password" placeholder="Dán API key..."></label>
+      <label>API key <input id="aiKey" type="password" placeholder="Dán API key (Gemini mới: bắt đầu bằng AQ.)" autocomplete="off" spellcheck="false"></label>
+      <small class="key-hint" id="aiKeyHint"></small>
       <label>Model <input id="aiModel" placeholder="gemini-3.8-flash / gpt-4o-mini"></label>
       <label class="openai-only">Base URL <input id="aiBase" placeholder="https://api.openai.com/v1"></label>
       <button class="btn primary sm" id="aiSave">Lưu cài đặt</button>
@@ -102,9 +103,9 @@
   <div class="toast" id="toast"></div>
   <div class="confetti" id="confetti"></div>
 
-  <script src="js/lessons.js?v=6"></script>
-  <script src="js/playground.js?v=6"></script>
-  <script src="js/chatbot.js?v=6"></script>
-  <script src="js/app.js?v=6"></script>
+  <script src="js/lessons.js?v=7"></script>
+  <script src="js/playground.js?v=7"></script>
+  <script src="js/chatbot.js?v=7"></script>
+  <script src="js/app.js?v=7"></script>
 </body>
 </html>

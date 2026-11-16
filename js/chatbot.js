@@ -257,7 +257,7 @@
       $("chatClose").addEventListener("click", () => this.toggle(false));
       $("chatSettingsBtn").addEventListener("click", () => { this.el.settings.hidden = !this.el.settings.hidden; });
       $("aiSave").addEventListener("click", () => {
-        this.cfg = { provider: $("aiProvider").value, key: $("aiKey").value.trim(), model: $("aiModel").value.trim(), base: $("aiBase").value.trim() };
+        this.cfg = { provider: $("aiProvider").value, key: $("aiKey").value.replace(/\s+/g, ""), model: $("aiModel").value.trim(), base: $("aiBase").value.trim() };
         try { localStorage.setItem("fe-ai-cfg", JSON.stringify(this.cfg)); } catch (e) {}
         this.el.settings.hidden = true;
         this.updateMode();
@@ -276,7 +276,15 @@
       this.renderChips();
     },
 
+    /* Hiện 4 ký tự cuối của key đang lưu → so với AI Studio (cột Key: "...xxxx") để biết có dán đúng key không */
+    updateKeyHint() {
+      const k = this.cfg.key || "", el = document.getElementById("aiKeyHint");
+      if (!el) return;
+      el.textContent = k ? "🔑 Key đang lưu: " + k.slice(0, 3) + "…" + k.slice(-4) + " (" + k.length + " ký tự) – 4 ký tự cuối phải khớp với AI Studio" : "Chưa lưu key nào.";
+    },
+
     updateMode() {
+      this.updateKeyHint();
       const on = this.cfg.provider !== "offline" && this.cfg.key;
       this.el.mode.textContent = on ? "🟢 AI: " + (this.cfg.provider === "gemini" ? "Gemini" : "OpenAI") + (this.cfg.model ? " · " + this.cfg.model : "") : "Chế độ offline · luôn sẵn sàng";
       document.querySelectorAll(".openai-only").forEach(x => x.style.display = document.getElementById("aiProvider").value === "openai" ? "" : "none");
@@ -370,6 +378,20 @@
       Object.assign(box.style, s);
     },
 
+    /* Gợi ý cách sửa cho các lỗi API hay gặp */
+    errorHelp(msg) {
+      const m = String(msg || "");
+      if (/API key not valid|API_KEY_INVALID|UNAUTHENTICATED|401/i.test(m))
+        return "\n👉 **Key sai hoặc đã bị xoá.** Vào aistudio.google.com/api-keys → bấm biểu tượng copy ở key, rồi ⚙️ → dán lại → Lưu. So 4 ký tự cuối dưới ô API key với AI Studio.";
+      if (/referer|referrer|origin/i.test(m))
+        return "\n👉 **Key đang giới hạn website.** Thêm https://automationdq.github.io/* vào Website restrictions của key.";
+      if (/quota|RESOURCE_EXHAUSTED|429/i.test(m))
+        return "\n👉 **Hết lượt miễn phí tạm thời.** Đợi 1 phút rồi hỏi lại, hoặc xem hạn mức trong AI Studio.";
+      if (/no longer available|not found|404/i.test(m))
+        return "\n👉 **Model không còn dùng được.** ⚙️ → ô Model → nhập tên model mới (vd gemini-3.8-flash) hoặc để trống.";
+      return "";
+    },
+
     renderChips() {
       const ctx = this.getContext();
       const chips = ctx.lesson
@@ -404,7 +426,7 @@
       let reply;
       if (this.cfg.provider !== "offline" && this.cfg.key) {
         try { reply = await aiReply(this.history, ctx, this.cfg); }
-        catch (e) { reply = "⚠️ Không gọi được AI (" + e.message + "). Mình trả lời bằng chế độ offline nhé:\n\n" + offlineReply(text, ctx); }
+        catch (e) { reply = "⚠️ Không gọi được AI (" + e.message + ")." + this.errorHelp(e.message) + "\n\nMình trả lời bằng chế độ offline nhé:\n\n" + offlineReply(text, ctx); }
       } else {
         await new Promise(r => setTimeout(r, 450 + Math.random() * 400));
         reply = offlineReply(text, ctx);
