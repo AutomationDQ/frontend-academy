@@ -11,6 +11,7 @@
   /* ---------------- Lưu trữ tiến độ ---------------- */
   const state = {
     done: {},        // { lessonId: true }
+    pdone: {},       // { "<lessonId>#p<n>": thời điểm } – bài luyện tập đã làm
     doneAt: {},      // { lessonId: thời điểm hoàn thành (ms) } – cho hồ sơ & lịch sử học
     code: {},        // { lessonId: {html,css,js} } – code bài tập đã lưu
     xp: 0,
@@ -169,7 +170,7 @@
         <div class="lessons">${ls.map(l => `
           <button class="lesson-link ${l.id === current ? "active" : ""}" data-lesson="${l.id}">
             <span class="ic">${l.icon}</span><span>${esc(l.title)}</span>
-            <span class="st">${state.done[l.id] ? "✅" : ""}</span>
+            <span class="st">${practiceOf(l.id).length ? `<small class="pc ${pDoneCount(l.id) === practiceOf(l.id).length ? "full" : ""}" title="Bài luyện tập đã làm">${pDoneCount(l.id)}/${practiceOf(l.id).length}</small>` : ""}${state.done[l.id] ? "✅" : ""}</span>
           </button>`).join("")}
         </div></div>`;
     }).join("") || '<p class="muted" style="padding:8px">Không tìm thấy bài học 🔍</p>';
@@ -203,7 +204,7 @@
 
   function render() {
     if (pg) { pg.destroy(); pg = null; }
-    currentLesson = null;
+    currentLesson = null; currentTask = null;
     const r = route();
     const view = $("#view");
     view.style.animation = "none"; void view.offsetWidth; view.style.animation = "";
@@ -314,7 +315,8 @@
   /* ---------------- Trang bài học ---------------- */
   function defaultTab(lesson, code) {
     if (lesson.runtime === "node") return "js";
-    if (["js", "advanced"].includes(lesson.level) && !code.html.trim()) return "js";
+    if (!String(code.html || "").trim() && !String(code.css || "").trim() && String(code.js || "").trim()) return "js";
+    if (["js", "advanced"].includes(lesson.level) && !String(code.html || "").trim()) return "js";
     if (["css", "layout"].includes(lesson.level)) return "css";
     if (lesson.level === "dom" || lesson.level === "advanced") return "js";
     return "html";
@@ -343,6 +345,18 @@
       <small class="muted">Bấm nút ⌨️ trên khung code để xem toàn bộ phím tắt.</small></details>`;
   }
 
+  /* ---------------- Bài luyện tập thêm (PRACTICE – js/practice-*.js) ----------------
+     Mỗi bài học có 1 bài tập chính (lesson.exercise – tính tiến độ & chứng nhận)
+     + nhiều bài luyện tập PRACTICE[lessonId] = [{ title, level, task, starter, hint, solution, check }]
+     Bài luyện tập: +30 XP, lưu code ở state.code["<id>#p<n>"], hoàn thành ở state.pdone */
+  const practiceOf = id => (window.PRACTICE && PRACTICE[id]) || [];
+  const pKey = (id, i) => i === 0 ? id : id + "#p" + i;
+  const pDoneCount = id => practiceOf(id).filter((_, i) => state.pdone[pKey(id, i + 1)]).length;
+  const totalPractice = () => LESSONS.reduce((t, l) => t + practiceOf(l.id).length, 0);
+  const totalPracticeDone = () => LESSONS.reduce((t, l) => t + pDoneCount(l.id), 0);
+  const DIFF = { 1: ["Dễ", "#16a34a"], 2: ["Trung bình", "#0ea5e9"], 3: ["Khó", "#f97316"], 4: ["Thử thách", "#a855f7"] };
+  let currentTask = null;   // bài tập đang làm (chính hoặc luyện tập) – cho chatbot
+
   function renderLesson(id) {
     const lesson = LESSONS.find(l => l.id === id);
     currentLesson = lesson;
@@ -354,24 +368,28 @@
     const idx = courseLessons.indexOf(lesson);
     const prev = courseLessons[idx - 1], next = courseLessons[idx + 1];
     const nextCourse = !next ? COURSES[COURSES.indexOf(course) + 1] : null;
-    const ex = lesson.exercise;
-    const isQuiz = ex.type === "quiz";
-    let fails = 0;
+    const tasks = [lesson.exercise, ...practiceOf(id)];
+    const hasQuiz = tasks.some(t => t.type === "quiz"), hasCode = tasks.some(t => t.type !== "quiz");
+    let cur = 0, fails = 0;
+    const T = () => tasks[cur], key = () => pKey(id, cur);
+    const isDone = i => i === 0 ? !!state.done[id] : !!state.pdone[pKey(id, i)];
+    currentTask = T();
 
     $("#crumbs").innerHTML = `<a href="#/course/${course.id}">${course.icon} ${course.short}</a> › ${lv.icon} Cấp ${lvIdx} · ${lv.name} › <b>${esc(lesson.title)}</b>`;
     $("#view").innerHTML = `
       <div class="lesson-wrap">
         <article class="lesson-content" style="--c:${lv.color}">
-          <span class="lesson-badge">${course.icon} ${course.short} · ${lv.icon} Cấp ${lvIdx} · Bài ${lessonsOf(lv.id).indexOf(lesson) + 1}/${lessonsOf(lv.id).length}${lesson.runtime === "node" ? " · 🟩 Node.js" : ""}${isQuiz ? " · 📝 Trắc nghiệm" : ""}</span>
+          <span class="lesson-badge">${course.icon} ${course.short} · ${lv.icon} Cấp ${lvIdx} · Bài ${lessonsOf(lv.id).indexOf(lesson) + 1}/${lessonsOf(lv.id).length}${lesson.runtime === "node" ? " · 🟩 Node.js" : ""}${lesson.exercise.type === "quiz" ? " · 📝 Trắc nghiệm" : ""}</span>
           <div class="lesson-title"><div class="big-ic">${lesson.icon}</div><h1>${esc(lesson.title)}</h1></div>
-          <div class="lesson-meta"><span>⏱️ ${lesson.duration} phút</span><span>⭐ +100 XP</span>${state.done[id] ? '<span class="done-badge">✅ Đã hoàn thành</span>' : ""}</div>
+          <div class="lesson-meta"><span>⏱️ ${lesson.duration} phút</span><span>⭐ +100 XP</span>${tasks.length > 1 ? `<span>🏋️ ${tasks.length - 1} bài luyện tập</span>` : ""}${state.done[id] ? '<span class="done-badge">✅ Đã hoàn thành</span>' : ""}</div>
           <p style="color:var(--muted)">${esc(lesson.summary)}</p>
           ${renderBlocks(lesson.content)}
-          ${isQuiz ? "" : editorTipsHTML(lesson)}
+          ${hasCode ? editorTipsHTML(lesson) : ""}
 
-          <div class="exercise-card">
-            <h3>${isQuiz ? "📝 Bài trắc nghiệm" : "🎯 Bài tập thực hành"}</h3>
-            <p>${inline(ex.task)}</p>
+          <div class="exercise-card" id="exCard">
+            ${tasks.length > 1 ? `<div class="task-tabs" id="taskTabs" role="tablist"></div><div class="task-progress" id="taskProg"></div>` : ""}
+            <h3 id="exTitle"></h3>
+            <div class="ex-task" id="exTask"></div>
             <div class="ex-actions">
               <button class="btn primary sm" id="checkBtn">✅ Kiểm tra bài</button>
               <button class="btn sm" id="hintBtn">💡 Gợi ý</button>
@@ -381,7 +399,8 @@
             <div class="hint-box" id="hintBox" hidden></div>
             <div class="result" id="result"></div>
             <div class="ex-next" id="exNext" hidden>
-              <span>${next ? "Hoàn thành rồi! Sẵn sàng cho bài tiếp theo chưa?" : "🏆 Bạn đã học xong bài cuối cùng của khoá " + course.name + "!"}</span>
+              <span id="exNextText"></span>
+              <button class="btn" id="nextTaskBtn" hidden></button>
               ${next
                 ? `<button class="btn primary" id="nextBtn" data-go="#/lesson/${next.id}">Bài tiếp: ${next.icon} ${esc(next.title)} →</button>`
                 : nextCourse
@@ -397,12 +416,14 @@
         </article>
 
         <div>
-          ${isQuiz ? '<div class="quiz-box" id="quizBox"></div>' : `
-          <div class="mode-switch">
-            <button data-mode="example">👀 Ví dụ mẫu</button>
-            <button data-mode="exercise">🎯 Làm bài tập</button>
-          </div>
-          <div id="pgBox"></div>`}
+          ${hasQuiz ? '<div class="quiz-box" id="quizBox" hidden></div>' : ""}
+          ${hasCode ? `<div id="codeSide" hidden>
+            <div class="mode-switch">
+              <button data-mode="example">👀 Ví dụ mẫu</button>
+              <button data-mode="exercise">🎯 Làm bài tập</button>
+            </div>
+            <div id="pgBox"></div>
+          </div>` : ""}
         </div>
       </div>`;
 
@@ -410,75 +431,160 @@
     bindCopy(view);
     view.querySelectorAll("[data-go]").forEach(el => el.addEventListener("click", () => go(el.dataset.go)));
 
-    const result = $("#result");
-    const exNext = $("#exNext");
-    const showNext = (scroll) => {
-      exNext.hidden = false;
-      if (scroll) exNext.scrollIntoView({ behavior: "smooth", block: "center" });
-    };
-    if (state.done[id]) showNext(false); // bài đã xong trước đó: hiện nút ngay
+    const result = $("#result"), exNext = $("#exNext");
     const show = (ok, msg) => { result.className = "result " + (ok ? "ok" : "fail"); result.textContent = (ok ? "🎉 " : "❌ ") + msg; };
+    const firstUndone = () => tasks.findIndex((_, i) => i > 0 && !isDone(i));
+
+    function drawTabs() {
+      if (tasks.length < 2) return;
+      $("#taskTabs").innerHTML = tasks.map((t, i) => {
+        const d = i === 0 ? null : DIFF[t.level || 1];
+        return `<button class="task-tab ${i === cur ? "active" : ""} ${isDone(i) ? "done" : ""}" role="tab" aria-selected="${i === cur}" data-i="${i}" title="${esc(t.title || "Bài tập chính")}">
+          ${isDone(i) ? "✅" : i === 0 ? "🎯" : "🏋️"} ${i === 0 ? "Bài chính" : "Luyện tập " + i}
+          ${d ? `<small style="--d:${d[1]}">${d[0]}</small>` : ""}</button>`;
+      }).join("");
+      $("#taskTabs").querySelectorAll(".task-tab").forEach(b => b.addEventListener("click", () => selectTask(+b.dataset.i)));
+      const n = tasks.length - 1, d = pDoneCount(id);
+      $("#taskProg").innerHTML = `<div class="tp-bar"><span style="width:${Math.round(d / n * 100)}%"></span></div><small>Luyện tập: <b>${d}/${n}</b> bài · mỗi bài +30 XP</small>`;
+    }
+
+    function updateNext(scroll) {
+      const i = firstUndone();
+      const nt = $("#nextTaskBtn");
+      exNext.hidden = !isDone(cur);
+      if (exNext.hidden) return;
+      if (i > 0 && i !== cur) { nt.hidden = false; nt.textContent = "🏋️ Luyện tập " + i + ": " + (tasks[i].title || ""); nt.onclick = () => selectTask(i, true); }
+      else nt.hidden = true;
+      $("#exNextText").textContent = cur > 0
+        ? (i > 0 ? "Giỏi lắm! Làm tiếp bài luyện tập để nhớ lâu hơn nhé." : "💪 Bạn đã làm hết bài luyện tập của bài này!")
+        : next ? "Hoàn thành rồi! " + (i > 0 ? "Luyện thêm cho chắc tay, hoặc sang bài tiếp theo." : "Sẵn sàng cho bài tiếp theo chưa?")
+          : "🏆 Bạn đã học xong bài cuối cùng của khoá " + course.name + "!";
+      if (scroll) exNext.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
     const passed = () => {
-      if (!state.done[id]) {
-        state.done[id] = true; state.doneAt[id] = Date.now(); state.xp += 100; touchStreak(); save();
-        toast("⭐ +100 XP – " + lesson.title);
+      if (!isDone(cur)) {
+        if (cur === 0) { state.done[id] = true; state.doneAt[id] = Date.now(); state.xp += 100; toast("⭐ +100 XP – " + lesson.title); }
+        else { state.pdone[key()] = Date.now(); state.xp += 30; toast("🏋️ +30 XP – Luyện tập " + cur + ": " + (T().title || "")); }
+        touchStreak(); save();
         renderSidebar($("#searchInput").value);
       }
       confetti();
-      showNext(true);
-      if (courseDone(course.id) && !exNext.querySelector(".cert-cta")) {
+      drawTabs();
+      updateNext(true);
+      if (cur === 0 && courseDone(course.id) && !exNext.querySelector(".cert-cta")) {
         exNext.insertAdjacentHTML("beforeend", `<button class="btn accent cert-cta" data-go="#/certificate/${course.id}">🏅 Nhận chứng nhận khoá ${esc(course.name)}</button>`);
         exNext.querySelector(".cert-cta").addEventListener("click", () => go("#/certificate/" + course.id));
         toast("🎓 Bạn đã hoàn thành khoá " + course.name + "!");
       }
     };
-    $("#hintBtn").addEventListener("click", () => { const h = $("#hintBox"); h.hidden = !h.hidden; h.textContent = "💡 " + ex.hint; });
 
-    if (isQuiz) { setupQuiz(lesson, { show, passed }); return; }
-
-    // Hai bộ đệm code: ví dụ (không lưu) và bài tập (lưu localStorage)
-    const buffers = {
-      example: { ...{ html: "", css: "", js: "" }, ...lesson.example },
-      exercise: state.code[id] ? { ...state.code[id] } : { ...ex.starter }
-    };
-    let mode = state.code[id] || state.done[id] ? "exercise" : "example";
-
-    pg = new Playground($("#pgBox"), {
-      code: buffers[mode],
-      runtime: lesson.runtime,
-      nodeConfig: { env: lesson.env || {}, files: lesson.files || {} },
-      requests: (mode === "example" ? lesson.exampleRequests : null) || lesson.requests || [],
-      active: defaultTab(lesson, buffers[mode]),
-      onChange: code => {
-        if (mode === "exercise") { buffers.exercise = code; state.code[id] = code; save(); }
-        else buffers.example = code;
-      }
-    });
-
-    // Gợi ý code: thêm các từ (biến, hàm…) xuất hiện trong ví dụ của bài – không lấy từ đáp án
-    if (pg.pro) {
-      const src = Object.values(lesson.example || {}).join("\n") + "\n" + (lesson.content || []).filter(b => b.code).map(b => b.code).join("\n");
-      pg.pro.setExtraWords([...new Set(src.match(/[A-Za-z_$][\w$]{3,}/g) || [])]);
-    }
-
+    /* ---- Phần code (playground) ---- */
+    let mode = "exercise", buffers = null;
+    const reqsFor = m => (m === "example" ? lesson.exampleRequests : null) || (cur > 0 && T().requests) || lesson.requests || [];
+    const nodeCfg = () => ({ env: Object.assign({}, lesson.env || {}, (cur > 0 && T().env) || {}), files: (cur > 0 && T().files) || lesson.files || {} });
+    const savedCode = () => state.code[key()] && !state.code[key()].quiz ? { ...state.code[key()] } : { ...(T().starter || {}) };
     const setMode = m => {
       buffers[mode] = pg.getCode();
       mode = m;
       view.querySelectorAll(".mode-switch button").forEach(b => b.classList.toggle("active", b.dataset.mode === m));
-      if (pg.setRequests) pg.setRequests((m === "example" ? lesson.exampleRequests : null) || lesson.requests || []);
+      if (pg.setRequests) pg.setRequests(reqsFor(m));
       pg.setCode(buffers[m]);
       pg.switchTab(defaultTab(lesson, buffers[m]));
     };
-    view.querySelectorAll(".mode-switch button").forEach(b => {
-      b.classList.toggle("active", b.dataset.mode === mode);
-      b.addEventListener("click", () => setMode(b.dataset.mode));
-    });
+    function openCode(fresh) {
+      $("#codeSide").hidden = false;
+      buffers = { example: buffers ? buffers.example : { ...{ html: "", css: "", js: "" }, ...lesson.example }, exercise: savedCode() };
+      if (fresh) mode = cur === 0 && !state.code[id] && !state.done[id] ? "example" : "exercise";
+      if (!pg) {
+        pg = new Playground($("#pgBox"), {
+          code: buffers[mode], runtime: lesson.runtime, nodeConfig: nodeCfg(), requests: reqsFor(mode),
+          active: defaultTab(lesson, buffers[mode]),
+          onChange: code => {
+            if (mode === "exercise") { buffers.exercise = code; state.code[key()] = code; save(); }
+            else buffers.example = code;
+          }
+        });
+        if (pg.pro) {
+          const src = Object.values(lesson.example || {}).join("\n") + "\n" + (lesson.content || []).filter(b => b.code).map(b => b.code).join("\n");
+          pg.pro.setExtraWords([...new Set(src.match(/[A-Za-z_$][\w$]{3,}/g) || [])]);
+        }
+        view.querySelectorAll(".mode-switch button").forEach(b => b.addEventListener("click", () => setMode(b.dataset.mode)));
+      } else {
+        pg.nodeConfig = nodeCfg();
+        if (pg.setRequests) pg.setRequests(reqsFor(mode));
+        pg.setCode(buffers[mode]);
+        pg.switchTab(defaultTab(lesson, buffers[mode]));
+      }
+      view.querySelectorAll(".mode-switch button").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
+    }
 
+    /* ---- Phần trắc nghiệm ---- */
+    let quiz = null;
+    function openQuiz() {
+      const ex = T(), box = $("#quizBox"), k = key();
+      box.hidden = false;
+      const saved = (state.code[k] && state.code[k].quiz) || [];
+      let answers = ex.questions.map((_, i) => saved[i] === undefined ? null : saved[i]);
+      let graded = false;
+      const persist = () => { state.code[k] = { quiz: answers }; save(); };
+      const draw = () => {
+        box.innerHTML = `<h3>📝 ${ex.questions.length} câu hỏi</h3><p class="muted" style="font-size:13px">Chọn đáp án cho từng câu rồi bấm <b>✅ Kiểm tra bài</b>.</p>` +
+          ex.questions.map((q, i) => `<div class="quiz-q">
+            <p>${i + 1}. ${inline(q.q)}</p>
+            ${q.code ? `<pre>${esc(q.code)}</pre>` : ""}
+            ${q.options.map((o, j) => {
+              const cls = [answers[i] === j ? "sel" : "", graded && j === q.answer && answers[i] === j ? "right" : "", graded && answers[i] === j && j !== q.answer ? "wrong" : ""].join(" ");
+              return `<button class="quiz-opt ${cls}" data-q="${i}" data-o="${j}"><span class="k">${"ABCD"[j]}</span><span>${inline(o)}</span></button>`;
+            }).join("")}
+            <div class="quiz-explain" ${graded && answers[i] !== null ? "" : "hidden"}>${answers[i] === q.answer ? "✅ " : "❌ "}${inline(q.explain || "")}</div>
+          </div>`).join("");
+        box.querySelectorAll(".quiz-opt").forEach(b => b.addEventListener("click", () => {
+          answers[+b.dataset.q] = +b.dataset.o; graded = false; persist(); draw();
+        }));
+      };
+      draw();
+      quiz = {
+        check() {
+          const missing = answers.map((a, i) => a === null ? i + 1 : 0).filter(Boolean);
+          if (missing.length) { show(false, "Bạn chưa trả lời câu " + missing.join(", ") + "."); return; }
+          graded = true; draw();
+          const wrong = ex.questions.map((q, i) => answers[i] !== q.answer ? i + 1 : 0).filter(Boolean);
+          if (wrong.length) show(false, "Đúng " + (ex.questions.length - wrong.length) + "/" + ex.questions.length + ". Xem lại câu " + wrong.join(", ") + " – đọc giải thích bên dưới mỗi câu nhé.");
+          else { show(true, "Xuất sắc! Bạn trả lời đúng cả " + ex.questions.length + " câu."); passed(); }
+        },
+        reset() { answers = ex.questions.map(() => null); graded = false; persist(); draw(); result.className = "result"; },
+        solution() {
+          if (!confirm("Hiện đáp án đúng cho tất cả câu hỏi?")) return;
+          answers = ex.questions.map(q => q.answer); graded = true; persist(); draw();
+          toast("🔑 Đã hiện đáp án – đọc kỹ phần giải thích nhé!");
+        }
+      };
+    }
+
+    function selectTask(i, scroll) {
+      if (pg && buffers && mode === "exercise") { buffers.exercise = pg.getCode(); }
+      cur = i; fails = 0; currentTask = T();
+      const ex = T(), d = DIFF[ex.level || 1];
+      $("#exTitle").innerHTML = cur === 0
+        ? (ex.type === "quiz" ? "📝 Bài trắc nghiệm" : "🎯 Bài tập thực hành")
+        : `🏋️ Luyện tập ${cur}: ${esc(ex.title || "")} <span class="diff" style="--d:${d[1]}">${d[0]}</span>`;
+      $("#exTask").innerHTML = String(ex.task || "").split("\n").map(line => `<p>${inline(line)}</p>`).join("");
+      $("#hintBox").hidden = true; result.className = "result";
+      drawTabs(); updateNext(false);
+      if ($("#quizBox")) $("#quizBox").hidden = ex.type !== "quiz";
+      if ($("#codeSide")) $("#codeSide").hidden = ex.type === "quiz";
+      if (ex.type === "quiz") openQuiz(); else { quiz = null; openCode(true); }
+      if (scroll) $("#exCard").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    $("#hintBtn").addEventListener("click", () => { const h = $("#hintBox"); h.hidden = !h.hidden; h.textContent = "💡 " + T().hint; });
     $("#checkBtn").addEventListener("click", async () => {
+      if (quiz) return quiz.check();
       if (mode !== "exercise") setMode("exercise");
       const btn = $("#checkBtn");
       btn.disabled = true; btn.textContent = "⏳ Đang chấm...";
-      const r = await pg.check(ex.check);
+      const r = await pg.check(T().check);
       btn.disabled = false; btn.textContent = "✅ Kiểm tra bài";
       show(r.pass, r.msg);
       if (r.pass) passed();
@@ -491,21 +597,26 @@
       }
     });
     $("#resetEx").addEventListener("click", () => {
+      if (quiz) return quiz.reset();
       if (!confirm("Xoá code bài tập hiện tại và bắt đầu lại?")) return;
-      delete state.code[id]; save();
-      buffers.exercise = { ...ex.starter };
+      delete state.code[key()]; save();
+      buffers.exercise = { ...(T().starter || {}) };
       if (mode === "exercise") pg.setCode(buffers.exercise); else setMode("exercise");
       result.className = "result";
     });
     $("#solBtn").addEventListener("click", () => {
+      if (quiz) return quiz.solution();
       if (!confirm("Xem đáp án sẽ thay thế code bài tập hiện tại. Bạn đã thử hết sức chưa? 😉")) return;
-      buffers.exercise = { ...ex.solution };
+      buffers.exercise = { ...T().solution };
       if (mode === "exercise") pg.setCode(buffers.exercise); else setMode("exercise");
-      state.code[id] = buffers.exercise; save();
+      state.code[key()] = buffers.exercise; save();
       toast("🔑 Đã nạp đáp án – hãy đọc hiểu từng dòng nhé!");
     });
-  }
 
+    // Mở bài: ?p=<n> trong hash (#/lesson/id/p2) → mở thẳng bài luyện tập n
+    const want = +((location.hash.match(/\/p(\d+)$/) || [])[1] || 0);
+    selectTask(want > 0 && want < tasks.length ? want : 0);
+  }
   /* ---------------- Chưa đăng ký: khoá bài học ---------------- */
   function renderLocked(id) {
     const lesson = LESSONS.find(l => l.id === id), course = courseOf(lesson);
@@ -543,6 +654,8 @@
       { ic: "🔥", t: "Giữ lửa 3 ngày", d: "Học 3 ngày liên tiếp", ok: state.streak >= 3 },
       { ic: "⚡", t: "Kỷ luật thép", d: "Học 7 ngày liên tiếp", ok: state.streak >= 7 },
       { ic: "🧠", t: "Nhà thông thái", d: "Làm đúng 3 bài trắc nghiệm", ok: quizDone >= 3 },
+      { ic: "🏋️", t: "Siêng luyện tập", d: "Hoàn thành 20 bài luyện tập", ok: totalPracticeDone() >= 20 },
+      { ic: "💎", t: "Bậc thầy luyện tập", d: "Hoàn thành 100 bài luyện tập", ok: totalPracticeDone() >= 100 },
       { ic: "🟩", t: "Chạm tới server", d: "Hoàn thành 1 bài Back-end", ok: beDone >= 1 },
       ...COURSES.map(c => ({ ic: c.icon, t: "Tốt nghiệp " + c.short, d: "Hoàn thành khoá " + c.name, ok: courseDone(c.id) }))
     ];
@@ -584,6 +697,7 @@
 
       <div class="stats">
         <div class="stat"><div class="stat-ic">✅</div><div><b>${done}</b><small>bài đã hoàn thành</small></div></div>
+        <div class="stat"><div class="stat-ic">🏋️</div><div><b>${totalPracticeDone()}/${totalPractice()}</b><small>bài luyện tập</small></div></div>
         <div class="stat"><div class="stat-ic">⭐</div><div><b>${state.xp}</b><small>điểm kinh nghiệm (XP)</small></div></div>
         <div class="stat"><div class="stat-ic">⏱️</div><div><b>${(minutes / 60).toFixed(1)} giờ</b><small>thời lượng đã học</small></div></div>
         <div class="stat"><div class="stat-ic">🏅</div><div><b>${nCert}/${COURSES.length}</b><small>chứng nhận</small></div></div>
@@ -780,46 +894,6 @@
   }
 
   /* ---------------- Bài trắc nghiệm ---------------- */
-  function setupQuiz(lesson, ui) {
-    const id = lesson.id, ex = lesson.exercise, box = $("#quizBox");
-    const saved = (state.code[id] && state.code[id].quiz) || [];
-    let answers = ex.questions.map((_, i) => saved[i] === undefined ? null : saved[i]);
-    let graded = false;
-    const persist = () => { state.code[id] = { quiz: answers }; save(); };
-    const draw = () => {
-      box.innerHTML = `<h3>📝 ${ex.questions.length} câu hỏi</h3><p class="muted" style="font-size:13px">Chọn đáp án cho từng câu rồi bấm <b>✅ Kiểm tra bài</b>.</p>` +
-        ex.questions.map((q, i) => `<div class="quiz-q">
-          <p>${i + 1}. ${inline(q.q)}</p>
-          ${q.code ? `<pre>${esc(q.code)}</pre>` : ""}
-          ${q.options.map((o, j) => {
-            const cls = [answers[i] === j ? "sel" : "", graded && j === q.answer && answers[i] === j ? "right" : "", graded && answers[i] === j && j !== q.answer ? "wrong" : ""].join(" ");
-            return `<button class="quiz-opt ${cls}" data-q="${i}" data-o="${j}"><span class="k">${"ABCD"[j]}</span><span>${inline(o)}</span></button>`;
-          }).join("")}
-          <div class="quiz-explain" ${graded && answers[i] !== null ? "" : "hidden"}>${answers[i] === q.answer ? "✅ " : "❌ "}${inline(q.explain || "")}</div>
-        </div>`).join("");
-      box.querySelectorAll(".quiz-opt").forEach(b => b.addEventListener("click", () => {
-        answers[+b.dataset.q] = +b.dataset.o; graded = false; persist(); draw();
-      }));
-    };
-    draw();
-    $("#checkBtn").addEventListener("click", () => {
-      const missing = answers.map((a, i) => a === null ? i + 1 : 0).filter(Boolean);
-      if (missing.length) { ui.show(false, "Bạn chưa trả lời câu " + missing.join(", ") + "."); return; }
-      graded = true; draw();
-      const wrong = ex.questions.map((q, i) => answers[i] !== q.answer ? i + 1 : 0).filter(Boolean);
-      if (wrong.length) ui.show(false, "Đúng " + (ex.questions.length - wrong.length) + "/" + ex.questions.length + ". Xem lại câu " + wrong.join(", ") + " – đọc giải thích bên dưới mỗi câu nhé.");
-      else { ui.show(true, "Xuất sắc! Bạn trả lời đúng cả " + ex.questions.length + " câu."); ui.passed(); }
-    });
-    $("#resetEx").addEventListener("click", () => {
-      answers = ex.questions.map(() => null); graded = false; persist(); draw(); $("#result").className = "result";
-    });
-    $("#solBtn").addEventListener("click", () => {
-      if (!confirm("Hiện đáp án đúng cho tất cả câu hỏi?")) return;
-      answers = ex.questions.map(q => q.answer); graded = true; persist(); draw();
-      toast("🔑 Đã hiện đáp án – đọc kỹ phần giải thích nhé!");
-    });
-  }
-
   /* ---------------- Sân chơi tự do ---------------- */
   const TEMPLATES = {
     blank: { name: "📄 Trống", html: "", css: "", js: "" },
@@ -901,7 +975,7 @@
 
     Chatbot.init(
       () => ({
-        lesson: currentLesson,
+        lesson: currentLesson ? Object.assign({}, currentLesson, { exercise: currentTask || currentLesson.exercise }) : null,
         course: currentLesson ? courseOf(currentLesson) : courseById(state.course),
         code: pg ? pg.getCode() : null,
         done: doneCount(),

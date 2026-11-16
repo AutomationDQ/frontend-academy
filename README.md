@@ -1,6 +1,6 @@
 # 🎓 Front-end Academy
 
-Web app tự học lập trình web từ A–Z: **3 khoá học · 54 bài** (Front-end Cơ bản → Front-end Nâng cao → Back-end Node.js). Mỗi bài có ví dụ chạy thử ngay – kể cả **server Node.js/Express mô phỏng ngay trong trình duyệt** – bài tập tự chấm điểm và trợ lý chatbot **Bit 🤖**.
+Web app tự học lập trình web từ A–Z: **3 khoá học · 54 bài** (Front-end Cơ bản → Front-end Nâng cao → Back-end Node.js). Mỗi bài có ví dụ chạy thử ngay – kể cả **server Node.js/Express mô phỏng ngay trong trình duyệt** – bài tập tự chấm điểm, **184 bài luyện tập thêm** và trợ lý chatbot **Bit 🤖**.
 
 🌐 **Bản online:** https://automationdq.github.io/frontend-academy/
 
@@ -22,6 +22,11 @@ frontend-academy/
     ├── lessons-fe-pro.js    # Khoá 2 – Front-end Nâng cao (13 bài)
     ├── lessons-backend.js   # Khoá 3 – Back-end phần 1: Nền tảng, Express & REST
     ├── lessons-backend-2.js # Khoá 3 – Back-end phần 2: SQL, Bảo mật, Triển khai
+    ├── practice-html-css.js # Luyện tập: HTML, CSS, Bố cục (11 bài × 4)
+    ├── practice-js.js       # Luyện tập: JavaScript, DOM, JS nâng cao (11 bài × 4)
+    ├── practice-fe-pro.js   # Luyện tập: Front-end Nâng cao (13 bài × 3)
+    ├── practice-backend.js  # Luyện tập: Back-end nền tảng & Express (10 bài × 3)
+    ├── practice-backend-2.js# Luyện tập: SQL, Bảo mật, Triển khai (9 bài × 3)
     ├── node-runtime.js      # Node.js mô phỏng: express, http, fs, crypto, bcrypt, jwt, better-sqlite3…
     ├── playground.js        # Trình soạn code, chạy trong iframe, API Tester, chấm bài
     ├── config.js            # Cấu hình: URL Apps Script, người cấp chứng nhận
@@ -57,6 +62,21 @@ frontend-academy/
 | 3 🗄️ | Cơ sở dữ liệu SQL | SQL cơ bản · UPDATE/DELETE/phân trang · JOIN · API + database |
 | 4 🔐 | Bảo mật & xác thực | bcrypt · JWT & phân quyền · SQL injection, CORS, rate limit |
 | 5 🚀 | Triển khai & dự án | Biến môi trường & deploy · Dự án cuối: Blog API |
+
+## Bài luyện tập thêm (184 bài)
+Mỗi bài học có **1 bài tập chính** (tính tiến độ & chứng nhận) + **3–4 bài luyện tập** theo độ khó tăng dần: 🟢 Dễ → 🔵 Trung bình → 🟠 Khó → 🟣 Thử thách.
+
+| Khoá | Số bài học | Luyện tập / bài | Tổng |
+|---|---|---|---|
+| 🧱 Front-end Cơ bản | 22 | 4 | 88 |
+| ⚛️ Front-end Nâng cao | 13 | 3 | 39 |
+| 🟩 Back-end Node.js | 19 | 3 | 57 |
+
+- Chọn bài bằng các tab **🎯 Bài chính / 🏋️ Luyện tập 1, 2, 3…** phía trên đề bài; mở thẳng bằng link `#/lesson/<id>/p2`.
+- Mỗi bài luyện tập **+30 XP**, có gợi ý, đáp án, tự chấm điểm như bài chính; code được lưu riêng (`state.code["<id>#p<n>"]`), trạng thái hoàn thành ở `state.pdone`.
+- Bài luyện tập có thể là code (HTML/CSS/JS/Node) hoặc trắc nghiệm (`type: "quiz"`); bài Node khai báo thêm `env`, `files`, `requests` riêng nếu cần.
+- Sidebar hiện số bài luyện tập đã làm (vd `2/4`), hồ sơ có thống kê + 2 huy hiệu mới (*Siêng luyện tập*, *Bậc thầy luyện tập*).
+- **Thêm bài luyện tập:** mở file `js/practice-*.js`, thêm object `{ title, level, task, starter, hint, solution, check }` vào mảng `P["<lessonId>"]`.
 
 ## Đăng ký học & chứng nhận
 - Học viên phải **đăng ký bằng Gmail + họ tên đầy đủ** trước khi vào bài học (trang chủ, lộ trình, sân chơi vẫn xem tự do).
