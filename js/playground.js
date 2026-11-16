@@ -71,12 +71,17 @@
             ${tabs}
             <span class="pg-spacer"></span>
             <label class="pg-toggle"><input type="checkbox" class="auto" ${this.autoRun ? "checked" : ""}> Tự chạy</label>
+            <button class="icon-btn small kb-btn" type="button" title="Phím tắt & gợi ý code (giống VS Code)" aria-label="Phím tắt">⌨️</button>
             <button class="btn sm primary run" title="Ctrl + Enter">▶ Chạy</button>
           </div>
           <div class="pg-split">
-            <div class="editor-wrap">
-              <div class="line-nums">1</div>
-              <textarea class="editor" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+            <div class="editor-col">
+              <div class="editor-wrap">
+                <div class="line-nums">1</div>
+                <div class="code-area"><textarea class="editor" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Ô soạn code"></textarea></div>
+                <div class="kb-panel" hidden></div>
+              </div>
+              <div class="pg-status"><span class="st-pos">Dòng 1, Cột 1</span><span class="st-tip">Ctrl+Space gợi ý · Tab Emmet · Ctrl+/ comment</span><span class="st-lang">HTML</span></div>
             </div>
             <div class="output">${outputTop}
               <div class="console">
@@ -112,7 +117,16 @@
         }
       });
       this.editor.addEventListener("scroll", () => { this.lineNums.scrollTop = this.editor.scrollTop; });
-      this.editor.addEventListener("keydown", e => this.handleKeys(e));
+      if (window.EditorPro) {
+        this.pro = window.EditorPro.attach(this);
+        const panel = $(".kb-panel");
+        panel.innerHTML = window.EditorPro.shortcutsHTML();
+        $(".kb-btn").addEventListener("click", () => { panel.hidden = !panel.hidden; });
+        panel.querySelector(".kb-close").addEventListener("click", () => { panel.hidden = true; this.editor.focus(); });
+      } else {
+        this.editor.addEventListener("keydown", e => this.handleKeys(e));
+        $(".kb-btn").hidden = true;
+      }
       if (node) this.bindApiTester();
     }
 
@@ -180,6 +194,7 @@
       this.container.querySelectorAll(".pg-tab").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
       this.editor.value = this.code[tab];
       this.updateLines();
+      if (this.pro) { this.pro.hide(); this.pro.refresh(); }
       this.editor.focus();
     }
 
@@ -246,6 +261,7 @@
       this.code = Object.assign({ html: "", css: "", js: "" }, code);
       this.editor.value = this.code[this.active];
       this.updateLines();
+      if (this.pro) this.pro.refresh();
       this.onChange(this.getCode());
       if (run) this.run();
     }

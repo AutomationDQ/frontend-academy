@@ -132,8 +132,10 @@
     const n = Object.keys(data.certs).length;
     box.innerHTML = `
       <div class="profile">
-        <span class="avatar" aria-hidden="true">${esc(p.name.split(" ").pop().charAt(0))}</span>
-        <div class="pf-info"><b title="${esc(p.name)}">${esc(p.name)}</b><small title="${esc(p.email)}">${esc(p.email)}${data.pendingRegister && CFG().appsScriptUrl ? " · ⏳ chưa đồng bộ" : ""}</small></div>
+        <a class="pf-link" href="#/profile" title="Xem hồ sơ học viên">
+          <span class="avatar" aria-hidden="true">${esc(p.name.split(" ").pop().charAt(0))}</span>
+          <span class="pf-info"><b title="${esc(p.name)}">${esc(p.name)}</b><small title="${esc(p.email)}">${p.learnerId ? "🆔 " + esc(p.learnerId) : esc(p.email)}${data.pendingRegister && CFG().appsScriptUrl ? " · ⏳ chưa đồng bộ" : ""}</small></span>
+        </a>
         <button class="icon-btn sm" type="button" title="Sửa thông tin" aria-label="Sửa thông tin">✏️</button>
       </div>
       ${n ? `<a class="pf-certs" href="#/certificates">🏅 ${n} chứng nhận</a>` : ""}`;
@@ -208,6 +210,13 @@
     isRegistered: () => !!(data.profile && data.profile.email),
     online: () => !!CFG().appsScriptUrl,
     openModal, renderSidebar, syncRegister, issue, verify, verifyUrl, certificateHTML,
+    resync() { if (data.profile && !data.profile.learnerId) { data.pendingRegister = true; save(); } return syncRegister(); },
+    restore(acc) {   // khôi phục từ file sao lưu (chỉ nhận cấu trúc hợp lệ)
+      if (!acc || !acc.profile || !acc.profile.email || !acc.profile.name) return;
+      data.profile = { name: String(acc.profile.name), email: String(acc.profile.email), learnerId: acc.profile.learnerId ? String(acc.profile.learnerId) : undefined, registeredAt: acc.profile.registeredAt };
+      data.certs = acc.certs && typeof acc.certs === "object" ? acc.certs : {};
+      data.pendingRegister = !data.profile.learnerId; save(); renderSidebar();
+    },
     logout() { data = { profile: null, certs: {}, pendingRegister: false }; save(); renderSidebar(); },
     _validate: validate, _normName: normName
   };

@@ -1,6 +1,6 @@
 /* =========================================================
    APP CHÍNH – điều hướng, tiến độ, render giao diện
-   Router dùng hash: #/  |  #/course/<id>  |  #/lesson/<id>  |  #/playground
+   Router dùng hash: #/  |  #/course/<id>  |  #/lesson/<id>  |  #/playground  |  #/profile
                      #/certificates  |  #/certificate/<courseId>  |  #/verify/<mã>
    ========================================================= */
 (function () {
@@ -11,6 +11,7 @@
   /* ---------------- Lưu trữ tiến độ ---------------- */
   const state = {
     done: {},        // { lessonId: true }
+    doneAt: {},      // { lessonId: thời điểm hoàn thành (ms) } – cho hồ sơ & lịch sử học
     code: {},        // { lessonId: {html,css,js} } – code bài tập đã lưu
     xp: 0,
     streak: 0,
@@ -177,7 +178,7 @@
     $("#levelList").querySelectorAll(".level-head").forEach(h => h.addEventListener("click", () => h.parentElement.classList.toggle("collapsed")));
     const pgName = route().page;
     document.querySelectorAll(".nav-btn").forEach(b => b.classList.toggle("active",
-      (b.dataset.nav === "home" && pgName === "home") || (b.dataset.nav === "playground" && pgName === "playground") ||
+      (b.dataset.nav === "home" && pgName === "home") || (b.dataset.nav === "playground" && pgName === "playground") || (b.dataset.nav === "profile" && pgName === "profile") ||
       (b.dataset.nav === "certificates" && ["certificates", "certificate", "verify"].includes(pgName))));
     renderProgress();
   }
@@ -192,6 +193,7 @@
     if (h[0] === "course" && COURSES.find(c => c.id === h[1])) return { page: "course", id: h[1] };
     if (h[0] === "playground") return { page: "playground" };
     if (h[0] === "certificates") return { page: "certificates" };
+    if (h[0] === "profile") return { page: "profile" };
     if (h[0] === "certificate" && COURSES.find(c => c.id === h[1])) return { page: "certificate", id: h[1] };
     if (h[0] === "verify") return { page: "verify", id: decodeURIComponent(h[1] || "") };
     return { page: "home" };
@@ -209,6 +211,7 @@
     else if (r.page === "lesson") renderLesson(r.id);
     else if (r.page === "course") renderCourse(r.id);
     else if (r.page === "certificates") renderCertificates();
+    else if (r.page === "profile") renderProfile();
     else if (r.page === "certificate") renderCertificate(r.id);
     else if (r.page === "verify") renderVerify(r.id);
     else if (r.page === "playground") renderPlayground();
@@ -317,6 +320,29 @@
     return "html";
   }
 
+  /* Mẹo soạn code theo ngữ cảnh bài học (khớp với tính năng của editor-pro.js) */
+  function editorTipsHTML(lesson) {
+    const ex = lesson.exercise, code = Object.assign({}, lesson.example || {}, ex.starter || {}, ex.solution || {});
+    const has = k => lesson.runtime !== "node" && String(code[k] || "").trim();
+    const K = s => s.split("+").map(x => `<kbd>${x}</kbd>`).join("+");
+    const tips = [];
+    if (lesson.runtime === "node") {
+      tips.push(`Gõ <code>aget</code> / <code>apost</code> / <code>adel</code> rồi ${K("Enter")} → khung route Express có sẵn`);
+      tips.push(`Gõ <code>res.</code> hoặc <code>req.</code> → danh sách <code>json</code>, <code>status</code>, <code>params</code>, <code>body</code>…`);
+      tips.push(`Snippet <code>errmw</code> (middleware lỗi), <code>prep</code> (câu SQL an toàn), <code>bhash</code>, <code>jwt-sign</code>`);
+    }
+    if (has("html")) {
+      tips.push(`HTML: gõ <code>ul>li*3</code> hoặc <code>div.card>h3+p</code> rồi ${K("Tab")} (Emmet)`);
+      tips.push(`Gõ <code>&lt;</code> để chọn thẻ · gõ <code>&gt;</code> sau <code>&lt;div</code> là tự đóng thẻ`);
+    }
+    if (has("css")) tips.push(`CSS: trong <code>{ }</code> gõ <code>jus</code> → <code>justify-content</code>; snippet <code>flex-center</code>, <code>grid-auto</code>, <code>media</code>`);
+    if (has("js")) tips.push(`JS: <code>qs</code> → querySelector · <code>ael</code> → addEventListener · <code>log</code> → console.log · gõ <code>arr.</code> xem phương thức`);
+    tips.push(`${K("Ctrl+Space")} mở gợi ý · ${K("Ctrl+Enter")} chạy · ${K("Ctrl+/")} comment · ${K("Alt+↑")}${K("↓")} di chuyển dòng · ${K("Shift+Alt+F")} căn lề`);
+    return `<details class="tips-card"><summary>⌨️ Mẹo soạn code nhanh như VS Code <small class="muted">(bấm để mở)</small></summary>
+      <ul>${tips.map(t => `<li>${t}</li>`).join("")}</ul>
+      <small class="muted">Bấm nút ⌨️ trên khung code để xem toàn bộ phím tắt.</small></details>`;
+  }
+
   function renderLesson(id) {
     const lesson = LESSONS.find(l => l.id === id);
     currentLesson = lesson;
@@ -341,6 +367,7 @@
           <div class="lesson-meta"><span>⏱️ ${lesson.duration} phút</span><span>⭐ +100 XP</span>${state.done[id] ? '<span class="done-badge">✅ Đã hoàn thành</span>' : ""}</div>
           <p style="color:var(--muted)">${esc(lesson.summary)}</p>
           ${renderBlocks(lesson.content)}
+          ${isQuiz ? "" : editorTipsHTML(lesson)}
 
           <div class="exercise-card">
             <h3>${isQuiz ? "📝 Bài trắc nghiệm" : "🎯 Bài tập thực hành"}</h3>
@@ -393,7 +420,7 @@
     const show = (ok, msg) => { result.className = "result " + (ok ? "ok" : "fail"); result.textContent = (ok ? "🎉 " : "❌ ") + msg; };
     const passed = () => {
       if (!state.done[id]) {
-        state.done[id] = true; state.xp += 100; touchStreak(); save();
+        state.done[id] = true; state.doneAt[id] = Date.now(); state.xp += 100; touchStreak(); save();
         toast("⭐ +100 XP – " + lesson.title);
         renderSidebar($("#searchInput").value);
       }
@@ -427,6 +454,12 @@
         else buffers.example = code;
       }
     });
+
+    // Gợi ý code: thêm các từ (biến, hàm…) xuất hiện trong ví dụ của bài – không lấy từ đáp án
+    if (pg.pro) {
+      const src = Object.values(lesson.example || {}).join("\n") + "\n" + (lesson.content || []).filter(b => b.code).map(b => b.code).join("\n");
+      pg.pro.setExtraWords([...new Set(src.match(/[A-Za-z_$][\w$]{3,}/g) || [])]);
+    }
 
     const setMode = m => {
       buffers[mode] = pg.getCode();
@@ -491,6 +524,143 @@
     $("#openReg").addEventListener("click", open);
     $("#view").querySelectorAll("[data-go]").forEach(el => el.addEventListener("click", () => go(el.dataset.go)));
     open();
+  }
+
+
+  /* ---------------- Hồ sơ học viên ---------------- */
+  const fmtDate = (d, withTime) => { const t = new Date(d); if (isNaN(t)) return "—"; return withTime ? t.toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" }) : t.toLocaleDateString("vi-VN"); };
+  const ago = ms => { const m = Math.round((Date.now() - ms) / 60000); if (m < 1) return "vừa xong"; if (m < 60) return m + " phút trước"; const h = Math.round(m / 60); if (h < 24) return h + " giờ trước"; const d = Math.round(h / 24); return d < 30 ? d + " ngày trước" : fmtDate(ms); };
+  function ring(pct, color, size = 92) {
+    return `<div class="ring" style="--p:${pct};--c:${color};width:${size}px;height:${size}px" role="img" aria-label="Hoàn thành ${pct}%"><span>${pct}%</span></div>`;
+  }
+  function achievements() {
+    const total = doneCount(), quizDone = LESSONS.filter(l => state.done[l.id] && l.exercise && l.exercise.type === "quiz").length;
+    const beDone = lessonsOfCourse("be-node").filter(l => state.done[l.id]).length;
+    return [
+      { ic: "🌱", t: "Bước đầu tiên", d: "Hoàn thành bài học đầu tiên", ok: total >= 1 },
+      { ic: "📚", t: "Chăm chỉ", d: "Hoàn thành 10 bài học", ok: total >= 10 },
+      { ic: "🚀", t: "Nửa chặng đường", d: "Hoàn thành 50% tổng số bài", ok: total >= LESSONS.length / 2 },
+      { ic: "🔥", t: "Giữ lửa 3 ngày", d: "Học 3 ngày liên tiếp", ok: state.streak >= 3 },
+      { ic: "⚡", t: "Kỷ luật thép", d: "Học 7 ngày liên tiếp", ok: state.streak >= 7 },
+      { ic: "🧠", t: "Nhà thông thái", d: "Làm đúng 3 bài trắc nghiệm", ok: quizDone >= 3 },
+      { ic: "🟩", t: "Chạm tới server", d: "Hoàn thành 1 bài Back-end", ok: beDone >= 1 },
+      ...COURSES.map(c => ({ ic: c.icon, t: "Tốt nghiệp " + c.short, d: "Hoàn thành khoá " + c.name, ok: courseDone(c.id) }))
+    ];
+  }
+  function renderProfile() {
+    $("#crumbs").innerHTML = "<b>👤 Hồ sơ học viên</b>";
+    const p = Account.profile;
+    if (!p) {
+      $("#view").innerHTML = `<section class="locked"><div class="locked-ic">👤</div><h1>Bạn chưa có hồ sơ học viên</h1>
+        <p>Đăng ký bằng Gmail + họ tên để có <b>mã học viên</b>, theo dõi % hoàn thành từng khoá và nhận chứng nhận.</p>
+        <div class="hero-actions" style="justify-content:center"><button class="btn primary" id="regNow">🎓 Đăng ký ngay</button></div></section>`;
+      $("#regNow").addEventListener("click", () => Account.openModal({ onDone: render }));
+      return;
+    }
+    const total = LESSONS.length, done = doneCount(), pctAll = Math.round(done / total * 100);
+    const minutes = LESSONS.filter(l => state.done[l.id]).reduce((t, l) => t + l.duration, 0);
+    const certs = Account.certs, nCert = Object.keys(certs).length;
+    const recent = Object.entries(state.doneAt || {}).map(([id, t]) => ({ l: LESSONS.find(x => x.id === id), t })).filter(x => x.l).sort((a, b) => b.t - a.t).slice(0, 8);
+    const achs = achievements(), nAch = achs.filter(a => a.ok).length;
+    const synced = !!p.learnerId, cloud = Account.online();
+    $("#view").innerHTML = `
+      <section class="pf-hero">
+        <div class="pf-avatar">${esc(p.name.split(" ").pop().charAt(0))}</div>
+        <div class="pf-main">
+          <h1>${esc(p.name)}</h1>
+          <div class="pf-meta">
+            <span>📧 ${esc(p.email)}</span>
+            <span>📅 Tham gia: ${p.registeredAt ? fmtDate(p.registeredAt) : "—"}</span>
+            <span>🔥 Chuỗi ${state.streak} ngày</span>
+          </div>
+          <div class="pf-id">
+            <span class="pf-id-label">Mã học viên</span>
+            <code id="learnerId">${synced ? esc(p.learnerId) : cloud ? "⏳ Đang đồng bộ…" : "Chưa cấp (chế độ offline)"}</code>
+            ${synced ? '<button class="btn sm" id="copyId" type="button">📋 Sao chép</button>' : cloud ? '<button class="btn sm" id="syncId" type="button">🔄 Đồng bộ lại</button>' : ""}
+          </div>
+        </div>
+        <div class="pf-overall">${ring(pctAll, "#facc15", 116)}<small>Tổng tiến độ<br><b>${done}/${total}</b> bài</small></div>
+      </section>
+
+      <div class="stats">
+        <div class="stat"><div class="stat-ic">✅</div><div><b>${done}</b><small>bài đã hoàn thành</small></div></div>
+        <div class="stat"><div class="stat-ic">⭐</div><div><b>${state.xp}</b><small>điểm kinh nghiệm (XP)</small></div></div>
+        <div class="stat"><div class="stat-ic">⏱️</div><div><b>${(minutes / 60).toFixed(1)} giờ</b><small>thời lượng đã học</small></div></div>
+        <div class="stat"><div class="stat-ic">🏅</div><div><b>${nCert}/${COURSES.length}</b><small>chứng nhận</small></div></div>
+      </div>
+
+      <h2 class="section-title">📊 Tiến độ từng khoá học</h2>
+      <div class="pf-courses">
+        ${COURSES.map(c => {
+          const ls = lessonsOfCourse(c.id), d = doneCount(c.id), pct = Math.round(d / ls.length * 100), cert = certs[c.id];
+          const left = ls.filter(l => !state.done[l.id]).reduce((t, l) => t + l.duration, 0);
+          const action = cert ? `<button class="btn accent sm" data-go="#/certificate/${c.id}">🏅 Xem chứng nhận</button>`
+            : d === ls.length ? `<button class="btn primary sm" data-go="#/certificate/${c.id}">🏅 Nhận chứng nhận</button>`
+            : `<button class="btn primary sm" data-go="#/lesson/${(ls.find(l => !state.done[l.id]) || ls[0]).id}">${d ? "▶ Học tiếp" : "🚀 Bắt đầu"}</button>`;
+          return `<div class="pf-course" style="--c:${c.color}">
+            <div class="pf-course-head">
+              ${ring(pct, c.color)}
+              <div style="flex:1;min-width:0"><h3>${c.icon} ${c.name}</h3>
+                <small class="muted">${d}/${ls.length} bài · ${pct === 100 ? "đã hoàn thành 🎉" : "còn khoảng " + Math.max(1, Math.round(left / 60)) + " giờ"}</small>
+                ${cert ? `<small class="pf-cert-id">Mã chứng nhận: <b>${esc(cert.certId)}</b></small>` : ""}</div>
+            </div>
+            <div class="pf-levels">
+              ${levelsOfCourse(c.id).map(lv => {
+                const lls = lessonsOf(lv.id), dd = lls.filter(l => state.done[l.id]).length;
+                return `<div class="pf-level" title="${esc(lv.name)}: ${dd}/${lls.length}"><span>${lv.icon} ${esc(lv.name)}</span><div class="lv-bar"><div style="width:${dd / lls.length * 100}%;background:${lv.color}"></div></div><small>${dd}/${lls.length}</small></div>`;
+              }).join("")}
+            </div>
+            <div class="pf-course-foot"><button class="btn sm" data-go="#/course/${c.id}">📘 Xem khoá</button>${action}</div>
+          </div>`;
+        }).join("")}
+      </div>
+
+      <div class="pf-grid2">
+        <div>
+          <h2 class="section-title">🕒 Hoạt động gần đây</h2>
+          <div class="pf-card">${recent.length ? `<ul class="pf-recent">${recent.map(x => `<li data-go="#/lesson/${x.l.id}"><span>${x.l.icon}</span><div><b>${esc(x.l.title)}</b><small>${courseOf(x.l).short} · ${ago(x.t)}</small></div><em>+100 XP</em></li>`).join("")}</ul>`
+            : `<p class="muted" style="margin:0">${done ? "Các bài hoàn thành từ bây giờ sẽ được ghi lại kèm thời gian tại đây." : "Chưa có hoạt động – hoàn thành bài đầu tiên để bắt đầu nhật ký học tập!"}</p>`}</div>
+        </div>
+        <div>
+          <h2 class="section-title">🏆 Thành tích <small class="muted">${nAch}/${achs.length}</small></h2>
+          <div class="pf-badges">${achs.map(a => `<div class="pf-badge ${a.ok ? "ok" : ""}" title="${esc(a.d)}"><span>${a.ic}</span><b>${esc(a.t)}</b><small>${esc(a.d)}</small></div>`).join("")}</div>
+        </div>
+      </div>
+
+      <h2 class="section-title">⚙️ Tài khoản</h2>
+      <div class="pf-card pf-actions">
+        <button class="btn" id="pfEdit">✏️ Sửa họ tên / Gmail</button>
+        <button class="btn" id="pfExport">💾 Tải bản sao lưu tiến độ</button>
+        <label class="btn" for="pfImport">📂 Khôi phục từ bản sao lưu</label><input type="file" id="pfImport" accept="application/json,.json" hidden>
+        <button class="btn danger-outline" id="pfLogout">🚪 Đăng xuất khỏi máy này</button>
+        <p class="muted" style="flex-basis:100%;margin:4px 0 0;font-size:13px">Tiến độ học được lưu trong trình duyệt này. Muốn học trên máy khác: tải bản sao lưu rồi khôi phục ở máy kia.</p>
+      </div>`;
+
+    $("#view").querySelectorAll("[data-go]").forEach(el => el.addEventListener("click", () => go(el.dataset.go)));
+    if ($("#copyId")) $("#copyId").addEventListener("click", () => { navigator.clipboard && navigator.clipboard.writeText(p.learnerId); toast("📋 Đã sao chép mã học viên " + p.learnerId); });
+    if ($("#syncId")) $("#syncId").addEventListener("click", async () => { $("#syncId").disabled = true; await Account.resync(); render(); if (!Account.profile.learnerId) toast("⚠️ Chưa đồng bộ được – kiểm tra kết nối mạng"); });
+    $("#pfEdit").addEventListener("click", () => Account.openModal({ onDone: render }));
+    $("#pfExport").addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify({ app: "frontend-academy", version: 1, exportedAt: new Date().toISOString(), progress: state, account: { profile: Account.profile, certs: Account.certs } }, null, 2)], { type: "application/json" });
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "frontend-academy-" + (p.learnerId || "tien-do") + ".json"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      toast("💾 Đã tải bản sao lưu");
+    });
+    $("#pfImport").addEventListener("change", e => {
+      const f = e.target.files[0]; if (!f) return;
+      f.text().then(t => {
+        const d = JSON.parse(t);
+        if (d.app !== "frontend-academy" || !d.progress || typeof d.progress.done !== "object") throw new Error("File không phải bản sao lưu Front-end Academy");
+        if (!confirm("Khôi phục sẽ GHI ĐÈ tiến độ hiện tại bằng bản sao lưu (" + Object.keys(d.progress.done).length + " bài đã xong). Tiếp tục?")) return;
+        ["done", "doneAt", "code", "xp", "streak", "lastDay"].forEach(k => { if (d.progress[k] !== undefined) state[k] = d.progress[k]; });
+        save(); if (d.account) Account.restore(d.account);
+        toast("✅ Đã khôi phục tiến độ"); render();
+      }).catch(err => toast("⚠️ " + err.message));
+      e.target.value = "";
+    });
+    $("#pfLogout").addEventListener("click", () => {
+      if (!confirm("Đăng xuất sẽ xoá họ tên/Gmail khỏi trình duyệt này (tiến độ học vẫn giữ). Tiếp tục?")) return;
+      Account.logout(); go("#/");
+    });
   }
 
   /* ---------------- Chứng nhận ---------------- */
@@ -722,7 +892,7 @@
       save(); touchStreak(); render(); toast("♻️ Đã xoá tiến độ");
     });
     $("#menuBtn").addEventListener("click", () => $("#sidebar").classList.toggle("open"));
-    document.querySelectorAll("[data-nav]").forEach(b => b.addEventListener("click", () => go({ playground: "#/playground", certificates: "#/certificates" }[b.dataset.nav] || "#/")));
+    document.querySelectorAll("[data-nav]").forEach(b => b.addEventListener("click", () => go({ playground: "#/playground", certificates: "#/certificates", profile: "#/profile" }[b.dataset.nav] || "#/")));
     $("#searchInput").addEventListener("input", e => renderSidebar(e.target.value));
     window.addEventListener("hashchange", render);
 
