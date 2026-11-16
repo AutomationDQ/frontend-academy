@@ -23,6 +23,10 @@
  * =========================================================
  */
 
+// ID Google Sheet lưu dữ liệu (dùng khi script là dự án độc lập, không gắn với Sheet)
+const SHEET_ID = '10d7QSzXfNv4oQCXziYC8akgi2trv_98OuxAW0dS20UU';
+const ss_ = () => SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.openById(SHEET_ID);
+
 const SHEET_LEARNERS = 'HocVien';
 const SHEET_CERTS = 'ChungNhan';
 const ISSUER = 'Trần Doãn Quảng';
@@ -36,7 +40,7 @@ const CERT_HEADERS = ['Mã chứng nhận', 'Họ và tên', 'Gmail', 'Mã khoá
 
 /* ---------- Chạy 1 lần để tạo trang tính ---------- */
 function caiDat() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = ss_();
   [[SHEET_LEARNERS, LEARNER_HEADERS], [SHEET_CERTS, CERT_HEADERS]].forEach(([name, headers]) => {
     const sh = ss.getSheetByName(name) || ss.insertSheet(name);
     sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold').setBackground('#dcfce7');
@@ -53,7 +57,7 @@ function json_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 function sheet_(name, headers) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = ss_();
   let sh = ss.getSheetByName(name);
   if (!sh) { sh = ss.insertSheet(name); sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold'); sh.setFrozenRows(1); }
   return sh;
