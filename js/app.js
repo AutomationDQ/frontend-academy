@@ -165,12 +165,12 @@
       if (!ls.length) return "";
       const d = lessonsOf(lv.id).filter(l => state.done[l.id]).length;
       const prefix = f ? courseById(lv.course).short + " · " : "Cấp " + levelNo(lv) + " · ";
-      return `<div class="level-group">
-        <div class="level-head"><span class="level-dot" style="background:${lv.color}"></span>${lv.icon} ${prefix}${lv.name}<span class="count">${d}/${lessonsOf(lv.id).length}</span></div>
+      return `<div class="level-group" style="--lv:${lv.color}">
+        <div class="level-head"><span class="chev">▾</span><span class="lv-title">${prefix}${esc(lv.name)}</span><span class="count">${d}/${lessonsOf(lv.id).length}</span></div>
         <div class="lessons">${ls.map(l => `
           <button class="lesson-link ${l.id === current ? "active" : ""}" data-lesson="${l.id}">
-            <span class="ic">${l.icon}</span><span>${esc(l.title)}</span>
-            <span class="st">${practiceOf(l.id).length ? `<small class="pc ${pDoneCount(l.id) === practiceOf(l.id).length ? "full" : ""}" title="Bài luyện tập đã làm">${pDoneCount(l.id)}/${practiceOf(l.id).length}</small>` : ""}${state.done[l.id] ? "✅" : ""}</span>
+            <span class="no">${levelNo(lv)}.${lessonsOf(lv.id).indexOf(l) + 1}</span><span class="lt">${esc(l.title)}</span>
+            <span class="st">${practiceOf(l.id).length ? `<small class="pc ${pDoneCount(l.id) === practiceOf(l.id).length ? "full" : ""}" title="Bài luyện tập đã làm">${pDoneCount(l.id)}/${practiceOf(l.id).length}</small>` : ""}${state.done[l.id] ? '<b class="ok" title="Đã hoàn thành">✓</b>' : ""}</span>
           </button>`).join("")}
         </div></div>`;
     }).join("") || '<p class="muted" style="padding:8px">Không tìm thấy bài học 🔍</p>';

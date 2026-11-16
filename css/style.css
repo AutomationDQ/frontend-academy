@@ -116,16 +116,33 @@ body.light .nav-btn.active, body.light .lesson-link.active { color: #15803d; bac
 .site-footer { margin: 28px 0 60px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); text-align: center; }
 .site-footer b:last-child { color: var(--primary); }
 
-.level-group { margin-bottom: 6px; }
+/* ---- Danh sách bài học: phân cấp Tiêu đề cấp → bài học thụt lề ---- */
+.level-group { margin-bottom: 4px; }
 .level-head {
-  display: flex; align-items: center; gap: 8px; font-size: 12px; text-transform: uppercase;
-  letter-spacing: .08em; color: var(--muted); padding: 10px 8px 6px; cursor: pointer; user-select: none;
+  display: flex; align-items: center; gap: 6px; padding: 10px 8px 6px;
+  font-size: 12.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--text); cursor: pointer; user-select: none; border-radius: 8px;
 }
-.level-head .count { margin-left: auto; font-size: 11px; background: var(--panel-2); padding: 2px 8px; border-radius: 99px; }
-.level-dot { width: 8px; height: 8px; border-radius: 50%; }
-.lesson-link { font-size: 13.5px; padding: 8px 10px; }
-.lesson-link .ic { width: 24px; text-align: center; }
-.lesson-link .st { margin-left: auto; font-size: 12px; }
+.level-head:hover { background: var(--panel-2); }
+.level-head .chev { width: 14px; font-size: 11px; color: var(--muted); transition: transform .2s; }
+.level-group.collapsed .level-head .chev { transform: rotate(-90deg); }
+.level-head .lv-title { flex: 1; min-width: 0; line-height: 1.35; }
+.level-head .count { font-size: 11px; font-weight: 700; color: var(--muted); background: var(--panel-2); padding: 2px 8px; border-radius: 99px; text-transform: none; }
+.lessons {
+  margin: 2px 0 8px 15px; padding-left: 10px;
+  border-left: 2px solid color-mix(in srgb, var(--lv, var(--border)) 45%, var(--border));
+  display: flex; flex-direction: column; gap: 1px;
+}
+.lesson-link { font-size: 13.5px; padding: 7px 10px; border-radius: 8px; color: var(--muted); line-height: 1.4; }
+.lesson-link:hover { color: var(--text); }
+.lesson-link { align-items: flex-start; gap: 8px; }
+.lesson-link .no { flex-shrink: 0; min-width: 26px; font-family: "JetBrains Mono", monospace; font-size: 12px; font-weight: 600; color: color-mix(in srgb, var(--lv, var(--muted)) 75%, var(--muted)); padding-top: 1px; }
+.lesson-link.active .no { color: inherit; }
+.lesson-link .lt { flex: 1; min-width: 0; }
+.lesson-link .st { padding-top: 1px; }
+.lesson-link .st { margin-left: auto; font-size: 12px; display: flex; align-items: center; flex-shrink: 0; }
+.lesson-link .st .ok { color: var(--success); font-size: 13px; }
+.lesson-link.active { box-shadow: inset 2px 0 0 var(--accent); }
 .level-group.collapsed .lessons { display: none; }
 
 /* ---------------- Main ---------------- */
