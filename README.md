@@ -15,6 +15,7 @@ Web app tự học lập trình web từ A–Z: **3 khoá học · 54 bài** (Fr
 frontend-academy/
 ├── index.html               # Khung giao diện: sidebar, topbar, chatbot
 ├── css/style.css            # Toàn bộ giao diện (sáng/tối bằng CSS variables)
+├── apps-script/Code.gs      # Backend Google Apps Script (Google Sheets)
 └── js/
     ├── lessons.js           # Khoá 1 – Front-end Cơ bản (22 bài)
     ├── courses.js           # Danh sách khoá học (COURSES)
@@ -23,6 +24,8 @@ frontend-academy/
     ├── lessons-backend-2.js # Khoá 3 – Back-end phần 2: SQL, Bảo mật, Triển khai
     ├── node-runtime.js      # Node.js mô phỏng: express, http, fs, crypto, bcrypt, jwt, better-sqlite3…
     ├── playground.js        # Trình soạn code, chạy trong iframe, API Tester, chấm bài
+    ├── config.js            # Cấu hình: URL Apps Script, người cấp chứng nhận
+    ├── account.js           # Đăng ký học viên, cấp & tra cứu chứng nhận
     ├── chatbot.js           # Trợ lý Bit: offline + tuỳ chọn Gemini/OpenAI
     └── app.js               # Router (#/course/id, #/lesson/id), tiến độ, XP, trắc nghiệm
 ```
@@ -54,6 +57,20 @@ frontend-academy/
 | 3 🗄️ | Cơ sở dữ liệu SQL | SQL cơ bản · UPDATE/DELETE/phân trang · JOIN · API + database |
 | 4 🔐 | Bảo mật & xác thực | bcrypt · JWT & phân quyền · SQL injection, CORS, rate limit |
 | 5 🚀 | Triển khai & dự án | Biến môi trường & deploy · Dự án cuối: Blog API |
+
+## Đăng ký học & chứng nhận
+- Học viên phải **đăng ký bằng Gmail + họ tên đầy đủ** trước khi vào bài học (trang chủ, lộ trình, sân chơi vẫn xem tự do).
+- Hoàn thành **100% bài của một khoá** → nhận **chứng nhận** do *Trần Doãn Quảng* cấp, có mã riêng (vd `FA-BEN-261116-K7P2Q`), in/lưu PDF khổ A4 ngang.
+- Tra cứu chứng nhận: `#/verify/<mã>` hoặc trang **🏅 Chứng nhận**.
+- Dữ liệu học viên & chứng nhận lưu vào **Google Sheets** qua Google Apps Script (`apps-script/Code.gs`). Thu hồi một chứng nhận: đổi cột *Trạng thái* thành `Thu hồi`.
+
+### Bật máy chủ Google Sheets (1 lần)
+1. Mở Google Sheet *Front-end Academy – Học viên & Chứng nhận* → **Tiện ích mở rộng → Apps Script**.
+2. Xoá code mẫu, dán toàn bộ `apps-script/Code.gs` → **Lưu**.
+3. **Triển khai → Tùy chọn triển khai mới** → loại **Ứng dụng web** · Thực thi dưới dạng **Tôi** · Quyền truy cập **Bất kỳ ai** → **Triển khai** → cấp quyền.
+4. Copy **URL ứng dụng web** (kết thúc bằng `/exec`) dán vào `js/config.js` → `appsScriptUrl`, rồi tăng `?v=` trong `index.html` và push.
+
+Chưa cấu hình `appsScriptUrl` thì web vẫn chạy: đăng ký và chứng nhận chỉ lưu trên máy học viên (chứng nhận ghi "chưa xác minh online").
 
 ## Back-end chạy trong trình duyệt như thế nào?
 - `node-runtime.js` tạo các biến giống Node (`require`, `module`, `process`, `__dirname`, `Buffer`) bên trong iframe sandbox và cung cấp module mô phỏng: **express** (API giống Express 5), `http`, `fs` (ổ đĩa ảo), `path`, `events`, `crypto` (SHA-256/HMAC thật), `bcryptjs`, `jsonwebtoken` (JWT HS256 thật), `dotenv`, `cors`, **better-sqlite3** (bộ máy SQL mini: CREATE, INSERT, SELECT với WHERE/ORDER BY/LIMIT/LIKE/JOIN/GROUP BY, UPDATE, DELETE).

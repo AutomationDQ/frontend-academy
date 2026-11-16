@@ -1,6 +1,7 @@
 /* =========================================================
    APP CHÍNH – điều hướng, tiến độ, render giao diện
    Router dùng hash: #/  |  #/course/<id>  |  #/lesson/<id>  |  #/playground
+                     #/certificates  |  #/certificate/<courseId>  |  #/verify/<mã>
    ========================================================= */
 (function () {
   const $ = s => document.querySelector(s);
@@ -49,6 +50,8 @@
     return (list.find(l => !state.done[l.id]) || LESSONS.find(l => !state.done[l.id]) || {}).id;
   };
   const levelNo = lv => levelsOfCourse(lv.course).indexOf(lv) + 1;
+  const courseDone = cid => doneCount(cid) === lessonsOfCourse(cid).length;
+  const courseHours = cid => Math.max(1, Math.round(lessonsOfCourse(cid).reduce((t, l) => t + l.duration, 0) / 60));
 
   /* ---------------- Tô màu cú pháp đơn giản ---------------- */
   const RULES = {
@@ -172,8 +175,10 @@
 
     $("#levelList").querySelectorAll(".lesson-link").forEach(b => b.addEventListener("click", () => go("#/lesson/" + b.dataset.lesson)));
     $("#levelList").querySelectorAll(".level-head").forEach(h => h.addEventListener("click", () => h.parentElement.classList.toggle("collapsed")));
+    const pgName = route().page;
     document.querySelectorAll(".nav-btn").forEach(b => b.classList.toggle("active",
-      (b.dataset.nav === "home" && route().page === "home") || (b.dataset.nav === "playground" && route().page === "playground")));
+      (b.dataset.nav === "home" && pgName === "home") || (b.dataset.nav === "playground" && pgName === "playground") ||
+      (b.dataset.nav === "certificates" && ["certificates", "certificate", "verify"].includes(pgName))));
     renderProgress();
   }
 
@@ -186,6 +191,9 @@
     if (h[0] === "lesson" && LESSONS.find(l => l.id === h[1])) return { page: "lesson", id: h[1] };
     if (h[0] === "course" && COURSES.find(c => c.id === h[1])) return { page: "course", id: h[1] };
     if (h[0] === "playground") return { page: "playground" };
+    if (h[0] === "certificates") return { page: "certificates" };
+    if (h[0] === "certificate" && COURSES.find(c => c.id === h[1])) return { page: "certificate", id: h[1] };
+    if (h[0] === "verify") return { page: "verify", id: decodeURIComponent(h[1] || "") };
     return { page: "home" };
   }
   const currentLessonId = () => route().page === "lesson" ? route().id : null;
@@ -197,8 +205,12 @@
     const r = route();
     const view = $("#view");
     view.style.animation = "none"; void view.offsetWidth; view.style.animation = "";
-    if (r.page === "lesson") renderLesson(r.id);
+    if (r.page === "lesson" && !Account.isRegistered()) renderLocked(r.id);
+    else if (r.page === "lesson") renderLesson(r.id);
     else if (r.page === "course") renderCourse(r.id);
+    else if (r.page === "certificates") renderCertificates();
+    else if (r.page === "certificate") renderCertificate(r.id);
+    else if (r.page === "verify") renderVerify(r.id);
     else if (r.page === "playground") renderPlayground();
     else renderHome();
     renderSidebar($("#searchInput").value);
@@ -217,7 +229,7 @@
       <h3>${c.name}</h3>
       <p>${c.desc}</p>
       <div class="cc-tags">${c.tags.map(t => `<span>${t}</span>`).join("")}</div>
-      <div class="cc-meta"><span>📘 ${ls.length} bài · ${levelsOfCourse(c.id).length} cấp · ~${Math.round(min / 60)} giờ</span><span>${d === ls.length ? "🏅 Xong" : d + "/" + ls.length}</span></div>
+      <div class="cc-meta"><span>📘 ${ls.length} bài · ${levelsOfCourse(c.id).length} cấp · ~${Math.round(min / 60)} giờ · 🏅 có chứng nhận</span><span>${d === ls.length ? "🏅 Xong" : d + "/" + ls.length}</span></div>
       <div class="lv-bar"><div style="width:${d / ls.length * 100}%"></div></div>
     </div>`;
   }
@@ -278,6 +290,7 @@
         </div>
         <button class="btn primary" data-go="#/lesson/${nextLesson(cid)}">${d ? "▶ Học tiếp" : "🚀 Bắt đầu khoá"}</button>
       </section>
+      ${courseDone(cid) ? `<div class="cert-banner"><span>🏅</span><div><b>Bạn đã hoàn thành khoá ${c.name}!</b><small>${Account.certs[cid] ? "Chứng nhận mã " + esc(Account.certs[cid].certId) + " đã được cấp." : "Nhận chứng nhận hoàn thành do " + esc(ACADEMY_CONFIG.issuer) + " cấp."}</small></div><button class="btn accent" data-go="#/certificate/${cid}">${Account.certs[cid] ? "Xem chứng nhận" : "Nhận chứng nhận"}</button></div>` : `<p class="muted cert-hint">🏅 Hoàn thành đủ ${ls.length} bài để nhận <b>chứng nhận</b> do ${esc(ACADEMY_CONFIG.issuer)} cấp – còn ${ls.length - d} bài.</p>`}
       <h2 class="section-title">🗺️ Lộ trình</h2>
       <div class="levels">
         ${levelsOfCourse(cid).map(lv => {
@@ -386,6 +399,11 @@
       }
       confetti();
       showNext(true);
+      if (courseDone(course.id) && !exNext.querySelector(".cert-cta")) {
+        exNext.insertAdjacentHTML("beforeend", `<button class="btn accent cert-cta" data-go="#/certificate/${course.id}">🏅 Nhận chứng nhận khoá ${esc(course.name)}</button>`);
+        exNext.querySelector(".cert-cta").addEventListener("click", () => go("#/certificate/" + course.id));
+        toast("🎓 Bạn đã hoàn thành khoá " + course.name + "!");
+      }
     };
     $("#hintBtn").addEventListener("click", () => { const h = $("#hintBox"); h.hidden = !h.hidden; h.textContent = "💡 " + ex.hint; });
 
@@ -453,6 +471,142 @@
       state.code[id] = buffers.exercise; save();
       toast("🔑 Đã nạp đáp án – hãy đọc hiểu từng dòng nhé!");
     });
+  }
+
+  /* ---------------- Chưa đăng ký: khoá bài học ---------------- */
+  function renderLocked(id) {
+    const lesson = LESSONS.find(l => l.id === id), course = courseOf(lesson);
+    $("#crumbs").innerHTML = `<a href="#/course/${course.id}">${course.icon} ${course.short}</a> › <b>${esc(lesson.title)}</b>`;
+    $("#view").innerHTML = `
+      <section class="locked">
+        <div class="locked-ic">🔒</div>
+        <h1>${lesson.icon} ${esc(lesson.title)}</h1>
+        <p>Đăng ký miễn phí bằng <b>Gmail</b> và <b>họ tên đầy đủ</b> để bắt đầu học, lưu tiến độ và nhận <b>chứng nhận hoàn thành khoá học</b> do <b>${esc(ACADEMY_CONFIG.issuer)}</b> cấp.</p>
+        <div class="hero-actions" style="justify-content:center">
+          <button class="btn primary" id="openReg">🎓 Đăng ký để học</button>
+          <button class="btn" data-go="#/course/${course.id}">← Xem lộ trình khoá</button>
+        </div>
+      </section>`;
+    const open = () => Account.openModal({ reason: "Bạn cần đăng ký trước khi bắt đầu khoá học.", onDone: () => { toast("👋 Chào " + Account.profile.name + "! Bắt đầu học thôi"); render(); } });
+    $("#openReg").addEventListener("click", open);
+    $("#view").querySelectorAll("[data-go]").forEach(el => el.addEventListener("click", () => go(el.dataset.go)));
+    open();
+  }
+
+  /* ---------------- Chứng nhận ---------------- */
+  function renderCertificates() {
+    $("#crumbs").innerHTML = "<b>🏅 Chứng nhận của tôi</b>";
+    $("#view").innerHTML = `
+      <section class="course-hero" style="--c:#facc15">
+        <div class="cc-ic">🏅</div>
+        <div style="flex:1"><h1>Chứng nhận hoàn thành khoá học</h1>
+          <p>Hoàn thành 100% bài học của một khoá để nhận chứng nhận do <b>${esc(ACADEMY_CONFIG.issuer)}</b> cấp. Mỗi chứng nhận có mã riêng để nhà tuyển dụng tra cứu.</p></div>
+      </section>
+      ${Account.isRegistered() ? "" : `<div class="cert-banner"><span>🎓</span><div><b>Bạn chưa đăng ký</b><small>Đăng ký bằng Gmail + họ tên để học và nhận chứng nhận.</small></div><button class="btn primary" id="regNow">Đăng ký</button></div>`}
+      <div class="courses">
+        ${COURSES.map(c => {
+          const ls = lessonsOfCourse(c.id), d = doneCount(c.id), cert = Account.certs[c.id];
+          const action = cert ? `<button class="btn accent" data-go="#/certificate/${c.id}">👁 Xem chứng nhận</button>`
+            : d === ls.length ? `<button class="btn primary" data-go="#/certificate/${c.id}">🏅 Nhận chứng nhận</button>`
+            : `<button class="btn" data-go="#/lesson/${nextLesson(c.id)}">▶ Học tiếp – còn ${ls.length - d} bài</button>`;
+          return `<div class="course-card" style="--c:${c.color}">
+            ${cert ? '<span class="cc-badge">ĐÃ CẤP</span>' : ""}
+            <div class="cc-ic">${c.icon}</div><h3>${c.name}</h3>
+            <p>${cert ? "Mã: <b>" + esc(cert.certId) + "</b><br>Ngày cấp: " + esc(String(cert.issuedAt).split(" ")[0]) : d + "/" + ls.length + " bài đã hoàn thành"}</p>
+            <div class="lv-bar" style="margin-bottom:14px"><div style="width:${d / ls.length * 100}%"></div></div>
+            ${action}
+          </div>`;
+        }).join("")}
+      </div>
+      <h2 class="section-title">🔍 Tra cứu chứng nhận</h2>
+      <form class="verify-form" id="verifyForm"><input id="verifyInput" placeholder="Nhập mã, vd FA-BEN-261116-K7P2Q" aria-label="Mã chứng nhận" spellcheck="false"><button class="btn primary">Tra cứu</button></form>`;
+    $("#view").querySelectorAll("[data-go]").forEach(el => el.addEventListener("click", () => go(el.dataset.go)));
+    if ($("#regNow")) $("#regNow").addEventListener("click", () => Account.openModal({ onDone: render }));
+    $("#verifyForm").addEventListener("submit", e => { e.preventDefault(); const v = $("#verifyInput").value.trim(); if (v) go("#/verify/" + encodeURIComponent(v.toUpperCase())); });
+  }
+
+  function renderCertificate(cid) {
+    const c = courseById(cid), ls = lessonsOfCourse(cid);
+    $("#crumbs").innerHTML = `<a href="#/certificates">🏅 Chứng nhận</a> › <b>${c.icon} ${c.name}</b>`;
+    const view = $("#view");
+    const bind = () => view.querySelectorAll("[data-go]").forEach(el => el.addEventListener("click", () => go(el.dataset.go)));
+    if (!courseDone(cid)) {
+      view.innerHTML = `<section class="locked"><div class="locked-ic">⏳</div><h1>Chưa đủ điều kiện</h1><p>Bạn đã hoàn thành <b>${doneCount(cid)}/${ls.length}</b> bài của khoá ${c.name}. Hoàn thành tất cả bài học để nhận chứng nhận.</p>
+        <div class="hero-actions" style="justify-content:center"><button class="btn primary" data-go="#/lesson/${nextLesson(cid)}">▶ Học tiếp</button></div></section>`;
+      return bind();
+    }
+    if (!Account.isRegistered()) {
+      view.innerHTML = `<section class="locked"><div class="locked-ic">🎓</div><h1>Đăng ký để nhận chứng nhận</h1><p>Chứng nhận cần họ tên đầy đủ và Gmail của bạn.</p><button class="btn primary" id="regNow">Đăng ký</button></section>`;
+      $("#regNow").addEventListener("click", () => Account.openModal({ onDone: render }));
+      return;
+    }
+    const cert = Account.certs[cid];
+    if (cert && (cert.verified || !Account.online())) return showCert(cert);
+    // Xác nhận tên trước khi cấp (tên in trên chứng nhận không đổi được sau khi cấp)
+    view.innerHTML = `
+      <section class="locked">
+        <div class="locked-ic">🏅</div>
+        <h1>Nhận chứng nhận: ${c.name}</h1>
+        <p>Chúc mừng bạn đã hoàn thành <b>${ls.length}</b> bài học! Kiểm tra lại họ tên sẽ in trên chứng nhận:</p>
+        <div class="confirm-name">${esc(Account.profile.name)}</div>
+        <p class="muted" style="font-size:13px">Gmail: ${esc(Account.profile.email)} · Sau khi cấp, họ tên trên chứng nhận không thể thay đổi.</p>
+        <div class="hero-actions" style="justify-content:center">
+          <button class="btn primary" id="issueBtn">✅ Đúng – cấp chứng nhận</button>
+          <button class="btn" id="editName">✏️ Sửa họ tên</button>
+        </div>
+        <p class="form-msg" id="issueMsg" role="status"></p>
+      </section>`;
+    $("#editName").addEventListener("click", () => Account.openModal({ onDone: render }));
+    $("#issueBtn").addEventListener("click", async () => {
+      const btn = $("#issueBtn"); btn.disabled = true; btn.textContent = "⏳ Đang cấp chứng nhận…";
+      try {
+        const c2 = await Account.issue(c, { lessons: ls.length, hours: courseHours(cid), completedAt: new Date().toLocaleDateString("vi-VN") });
+        confetti(); toast("🏅 Đã cấp chứng nhận " + c2.certId);
+        showCert(c2);
+      } catch (e) {
+        btn.disabled = false; btn.textContent = "↻ Thử lại";
+        $("#issueMsg").textContent = "⚠️ " + e.message;
+      }
+    });
+
+    function showCert(ct) {
+      view.innerHTML = `
+        <div class="cert-actions">
+          <button class="btn primary" id="printBtn">🖨️ In / Lưu PDF</button>
+          ${ct.verified ? '<button class="btn" id="copyLink">🔗 Sao chép link xác minh</button><button class="btn" id="openVerify">🔍 Trang xác minh</button>' : ""}
+          <button class="btn ghost" data-go="#/certificates">← Tất cả chứng nhận</button>
+        </div>
+        <div class="cert-scroll">${Account.certificateHTML(ct)}</div>
+        <p class="muted" style="font-size:13px;margin-top:10px">💡 Bấm <b>In / Lưu PDF</b> → chọn máy in <b>"Lưu dưới dạng PDF"</b>, khổ <b>A4 ngang</b>, bật <b>Đồ hoạ nền</b> (Background graphics).</p>`;
+      bind();
+      $("#printBtn").addEventListener("click", () => window.print());
+      if ($("#copyLink")) $("#copyLink").addEventListener("click", () => {
+        const url = Account.verifyUrl(ct.certId);
+        (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => toast("🔗 Đã sao chép: " + url), () => prompt("Copy link xác minh:", url));
+      });
+      if ($("#openVerify")) $("#openVerify").addEventListener("click", () => go("#/verify/" + encodeURIComponent(ct.certId)));
+    }
+  }
+
+  function renderVerify(id) {
+    $("#crumbs").innerHTML = `<a href="#/certificates">🏅 Chứng nhận</a> › <b>Tra cứu</b>`;
+    $("#view").innerHTML = `
+      <section class="verify-box">
+        <h1>🔍 Tra cứu chứng nhận</h1>
+        <p class="muted">Kiểm tra một chứng nhận của Front-end Academy là thật hay giả.</p>
+        <form class="verify-form" id="verifyForm"><input id="verifyInput" value="${esc(id)}" placeholder="FA-BEN-261116-K7P2Q" aria-label="Mã chứng nhận" spellcheck="false"><button class="btn primary">Tra cứu</button></form>
+        <div id="verifyResult" role="status"></div>
+      </section>`;
+    $("#verifyForm").addEventListener("submit", e => { e.preventDefault(); const v = $("#verifyInput").value.trim().toUpperCase(); if (v) go("#/verify/" + encodeURIComponent(v)); });
+    const out = $("#verifyResult");
+    if (!id) return;
+    if (!Account.online()) { out.innerHTML = '<div class="verify-res warn">⚠️ Hệ thống tra cứu online chưa được bật (chưa cấu hình máy chủ Google Sheets).</div>'; return; }
+    out.innerHTML = '<div class="verify-res">⏳ Đang tra cứu…</div>';
+    Account.verify(id.toUpperCase()).then(r => {
+      if (r.valid) out.innerHTML = `<div class="verify-res ok"><b>✅ Chứng nhận hợp lệ</b>
+        <dl><dt>Mã</dt><dd>${esc(r.certId)}</dd><dt>Học viên</dt><dd><b>${esc(r.name)}</b></dd><dt>Khoá học</dt><dd>${esc(r.courseName)} (${esc(r.lessons)} bài)</dd><dt>Ngày cấp</dt><dd>${esc(String(r.issuedAt).split(" ")[0])}</dd><dt>Người cấp</dt><dd>${esc(r.issuer)}</dd></dl></div>`;
+      else out.innerHTML = `<div class="verify-res bad"><b>❌ ${r.revoked ? "Chứng nhận đã bị thu hồi" : "Không hợp lệ"}</b><p>${esc(r.reason || "Chứng nhận này không còn hiệu lực.")}</p></div>`;
+    }).catch(e => { out.innerHTML = `<div class="verify-res warn">⚠️ ${esc(e.message)}</div>`; });
   }
 
   /* ---------------- Bài trắc nghiệm ---------------- */
@@ -568,9 +722,12 @@
       save(); touchStreak(); render(); toast("♻️ Đã xoá tiến độ");
     });
     $("#menuBtn").addEventListener("click", () => $("#sidebar").classList.toggle("open"));
-    document.querySelectorAll("[data-nav]").forEach(b => b.addEventListener("click", () => go(b.dataset.nav === "playground" ? "#/playground" : "#/")));
+    document.querySelectorAll("[data-nav]").forEach(b => b.addEventListener("click", () => go({ playground: "#/playground", certificates: "#/certificates" }[b.dataset.nav] || "#/")));
     $("#searchInput").addEventListener("input", e => renderSidebar(e.target.value));
     window.addEventListener("hashchange", render);
+
+    Account.renderSidebar();
+    Account.syncRegister();
 
     Chatbot.init(
       () => ({
