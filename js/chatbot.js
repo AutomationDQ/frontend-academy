@@ -195,7 +195,13 @@
   }
 
   /* ---------------- Gọi AI thật ---------------- */
-  const GEMINI_FALLBACKS = ["gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.8-flash"];
+  // Thứ tự thử khi model trước quá tải/lỗi tạm thời (thêm/bớt model tại đây)
+  const GEMINI_FALLBACKS = [
+    "gemini-3.5-flash-lite",    // 1. nhanh nhất, ít quá tải – mặc định
+    "gemini-flash-lite-latest", // 2. luôn là bản Lite mới nhất
+    "gemini-3.7-flash",         // 3. Flash bản trước – thay khi 3.8 bận
+    "gemini-3.8-flash"          // 4. thông minh nhất, hay quá tải – thử cuối
+  ];
   const GEMINI_TIMEOUT_MS = 20000;
   async function aiReply(history, ctx, cfg) {
     const sys = [
